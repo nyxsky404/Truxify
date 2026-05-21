@@ -23,7 +23,10 @@ class ShellScreen extends StatefulWidget {
 }
 
 class _ShellScreenState extends State<ShellScreen> {
-  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  final GlobalKey<NavigatorState> _homeNavigatorKey = GlobalKey<NavigatorState>();
+  final GlobalKey<NavigatorState> _tripsNavigatorKey = GlobalKey<NavigatorState>();
+  final GlobalKey<NavigatorState> _earningsNavigatorKey = GlobalKey<NavigatorState>();
+  final GlobalKey<NavigatorState> _profileNavigatorKey = GlobalKey<NavigatorState>();
   final ValueNotifier<int> _currentIndex = ValueNotifier<int>(0);
 
   @override
@@ -36,7 +39,7 @@ class _ShellScreenState extends State<ShellScreen> {
     _currentIndex.value = index;
   }
 
-  Route<dynamic> _routeFactory(RouteSettings settings) {
+  Route<dynamic>? _routeFactory(RouteSettings settings) {
     switch (settings.name) {
       case AppRoutes.myTruck:
         return truxifyPageRoute((context) => const MyTruckScreen());
@@ -62,36 +65,45 @@ class _ShellScreenState extends State<ShellScreen> {
           ),
         );
       default:
-        return truxifyPageRoute(
-          (context) {
-            return ValueListenableBuilder<int>(
-              valueListenable: _currentIndex,
-              builder: (context, currentIndex, _) {
-                return IndexedStack(
-                  index: currentIndex,
-                  children: [
-                    const HomeScreen(),
-                    const TripsScreen(),
-                    const EarningsScreen(),
-                    ProfileScreen(
-                      onOpenDocuments: () => _navigatorKey.currentState?.pushNamed(AppRoutes.documents),
-                      onSelectTab: _openTab,
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-        );
+        return null;
     }
+  }
+
+  Widget _buildTabNavigator(GlobalKey<NavigatorState> key, Widget root) {
+    return Navigator(
+      key: key,
+      onGenerateRoute: (settings) {
+        if (settings.name == '/' || settings.name == AppRoutes.shell) {
+          return truxifyPageRoute((context) => root);
+        }
+        final route = _routeFactory(settings);
+        return route ?? truxifyPageRoute((context) => root);
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Navigator(
-        key: _navigatorKey,
-        onGenerateRoute: _routeFactory,
+      body: ValueListenableBuilder<int>(
+        valueListenable: _currentIndex,
+        builder: (context, currentIndex, _) {
+          return IndexedStack(
+            index: currentIndex,
+            children: [
+              _buildTabNavigator(_homeNavigatorKey, const HomeScreen()),
+              _buildTabNavigator(_tripsNavigatorKey, const TripsScreen()),
+              _buildTabNavigator(_earningsNavigatorKey, const EarningsScreen()),
+              _buildTabNavigator(
+                _profileNavigatorKey,
+                ProfileScreen(
+                  onOpenDocuments: () => _profileNavigatorKey.currentState?.pushNamed(AppRoutes.documents),
+                  onSelectTab: _openTab,
+                ),
+              ),
+            ],
+          );
+        },
       ),
       bottomNavigationBar: SafeArea(
         top: false,
