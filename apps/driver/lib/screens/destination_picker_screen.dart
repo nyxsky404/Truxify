@@ -70,6 +70,7 @@ class _DestinationPickerScreenState extends State<DestinationPickerScreen> {
 
   @override
   void dispose() {
+    _mapController.dispose();
     _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
@@ -105,7 +106,10 @@ class _DestinationPickerScreenState extends State<DestinationPickerScreen> {
     try {
       final response = await http.get(
         uri,
-        headers: const <String, String>{'Accept': 'application/json'},
+        headers: const <String, String>{
+          'Accept': 'application/json',
+          'User-Agent': 'Truxify Driver App',
+        },
       );
       if (response.statusCode != 200) {
         throw Exception('Search failed');
@@ -181,7 +185,10 @@ class _DestinationPickerScreenState extends State<DestinationPickerScreen> {
     try {
       final response = await http.get(
         uri,
-        headers: const <String, String>{'Accept': 'application/json'},
+        headers: const <String, String>{
+          'Accept': 'application/json',
+          'User-Agent': 'Truxify Driver App',
+        },
       );
       if (response.statusCode != 200) {
         throw Exception('Reverse lookup failed');

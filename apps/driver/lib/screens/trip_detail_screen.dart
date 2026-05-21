@@ -22,6 +22,12 @@ class TripDetailScreen extends StatefulWidget {
 class _TripDetailScreenState extends State<TripDetailScreen> {
   final MapController _mapController = MapController();
 
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
+  }
+
   void _showBlockchainBottomSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
