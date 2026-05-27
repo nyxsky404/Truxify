@@ -96,13 +96,15 @@ class HelpSupportScreen extends StatelessWidget {
               separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final faq = faqs[index];
+                final question = faq['question'] ?? '';
+                final answer = faq['answer'] ?? '';
                 return Theme(
                   data: Theme.of(context).copyWith(
                     dividerColor: Colors.transparent,
                   ),
                   child: ExpansionTile(
                     title: Text(
-                      faq['question']!,
+                      question,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w500,
                           ),
@@ -111,7 +113,7 @@ class HelpSupportScreen extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         child: Text(
-                          faq['answer']!,
+                          answer,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: FreightFairColors.adaptiveSecondaryText(context),
                               ),
