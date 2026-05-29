@@ -14,7 +14,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _phoneController = TextEditingController(text: '9876543210');
+  final TextEditingController _phoneController =
+      TextEditingController(text: '9876543210');
   bool _loading = false;
 
   @override
@@ -26,19 +27,19 @@ class _LoginScreenState extends State<LoginScreen> {
   void _sendOtp() async {
     final phone = _phoneController.text.replaceAll(' ', '').trim();
 
-  if (phone.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please enter phone number')),
-    );
-    return;
-  }
+    if (phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter phone number')),
+      );
+      return;
+    }
 
-  if (phone.length != 10 || int.tryParse(phone) == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Enter a valid 10-digit phone number')),
-    );
-    return;
-  }
+    if (phone.length != 10 || int.tryParse(phone) == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid 10-digit phone number')),
+      );
+      return;
+    }
 
     setState(() => _loading = true);
     await Future<void>.delayed(const Duration(milliseconds: 400));
@@ -46,7 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
     setState(() => _loading = false);
-    Navigator.of(context).pushNamed(AppRoutes.otp,  arguments: phone);
+    Navigator.of(context).pushNamed(AppRoutes.otp, arguments: phone);
   }
 
   @override
@@ -66,11 +67,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               const SizedBox(height: 8),
-              Text(loginSubtitle, style: Theme.of(context).textTheme.bodyMedium),
+              Text(loginSubtitle,
+                  style: Theme.of(context).textTheme.bodyMedium),
               const SizedBox(height: 28),
               Text(
                 'Phone Number',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(color: TruxifyColors.secondaryText),
+                style: Theme.of(context)
+                    .textTheme
+                    .labelLarge
+                    ?.copyWith(color: TruxifyColors.secondaryText),
               ),
               const SizedBox(height: 10),
               TextField(
@@ -95,12 +100,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 padding: const EdgeInsets.all(18),
                 child: Row(
                   children: [
-                    const Icon(Icons.shield_outlined, color: TruxifyColors.accent),
+                    const Icon(Icons.shield_outlined,
+                        color: TruxifyColors.accent),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'Mock login is enabled for the offline driver demo. OTP 1234 always works.',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: TruxifyColors.primaryText),
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.copyWith(color: TruxifyColors.primaryText),
                       ),
                     ),
                   ],
