@@ -42,11 +42,16 @@ class SyncEngine {
 
   Future<int> syncPending() async {
     final pending = await db.pendingEvents(limit: batchSize);
-    if (pending.isEmpty) {
+    final eligible = pending.where((event) => event.retryCount < maxRetries).toList();
+    if (eligible.isEmpty) {
       return 0;
     }
 
-    final resolved = resolver.resolve(pending);
+    final resolved = resolver.resolve(eligible);
+    if (resolved.isEmpty) {
+      return 0;
+    }
+
     await _markAsSyncing(resolved);
 
     final uploaded = await _uploadBatch(resolved);
@@ -70,14 +75,44 @@ class SyncEngine {
   }
 
   Future<bool> _uploadBatch(List<TripEvent> events) async {
-    final body = jsonEncode({'events': events.map((event) => event.toJson()).toList()});
+    final body = jsonEncode({
+      'events': events.map((event) => event.toJson()).toList(),
+      'idempotencyKey': events.map((event) => event.id).join(','),
+    });
 
-    final response = await http.post(
-      Uri.parse('$apiBaseUrl/api/v1/trips/events/batch'),
-      headers: {'Content-Type': 'application/json'},
-      body: body,
-    );
+    try {
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/api/v1/trips/events/batch'),
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      ).timeout(const Duration(seconds: 15));
 
-    return response.statusCode == 200 || response.statusCode == 202;
+      if (response.statusCode == 200 || response.statusCode == 202) {
+        return true;
+      }
+
+      if (response.statusCode == 409 || response.statusCode == 422 || response.statusCode == 400) {
+        return false;
+      }
+
+      if (response.statusCode == 429 || response.statusCode >= 500) {
+        await Future<void>.delayed(_backoffDelay(_maxRetryCount(events)));
+        return false;
+      }
+
+      return false;
+    } catch (_) {
+      await Future<void>.delayed(_backoffDelay(_maxRetryCount(events)));
+      return false;
+    }
+  }
+
+  int _maxRetryCount(List<TripEvent> events) {
+    return events.map((event) => event.retryCount).reduce((value, element) => value > element ? value : element);
+  }
+
+  Duration _backoffDelay(int retryCount) {
+    final delayMs = 250 * (1 << (retryCount.clamp(0, 5)));
+    return Duration(milliseconds: delayMs > 8000 ? 8000 : delayMs);
   }
 }

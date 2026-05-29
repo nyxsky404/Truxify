@@ -31,6 +31,7 @@ class GpsDeltaCompressor {
   final Duration flushInterval;
 
   final List<GpsPoint> _buffer = <GpsPoint>[];
+  final List<GpsBatch> _pending = <GpsBatch>[];
   Timer? _timer;
 
   List<GpsBatch> add(GpsPoint point) {
@@ -48,7 +49,9 @@ class GpsDeltaCompressor {
     _buffer.add(point);
 
     if (moved || elapsed) {
-      flushed.add(GpsBatch(List<GpsPoint>.of(_buffer)));
+      final batch = GpsBatch(List<GpsPoint>.of(_buffer));
+      _pending.add(batch);
+      flushed.add(batch);
       _buffer.clear();
     }
 
@@ -56,11 +59,14 @@ class GpsDeltaCompressor {
   }
 
   List<GpsBatch> drain() {
-    final flushed = <GpsBatch>[];
+    final flushed = List<GpsBatch>.of(_pending);
+    _pending.clear();
+
     if (_buffer.isNotEmpty) {
       flushed.add(GpsBatch(List<GpsPoint>.of(_buffer)));
       _buffer.clear();
     }
+
     return flushed;
   }
 
@@ -70,10 +76,9 @@ class GpsDeltaCompressor {
   }
 
   void _flush() {
-    final batch = drain();
-    if (batch.isNotEmpty) {
-      // The batch is intentionally returned to the caller when needed.
-      // The timer keeps the compressor alive for background flushes.
+    if (_buffer.isNotEmpty) {
+      _pending.add(GpsBatch(List<GpsPoint>.of(_buffer)));
+      _buffer.clear();
     }
   }
 

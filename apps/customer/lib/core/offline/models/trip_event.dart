@@ -22,11 +22,18 @@ class TripEvent {
     String syncStatus = 'pending',
     int retryCount = 0,
   }) {
+    final normalizedPayload = <String, dynamic>{
+      'lat': payload['lat'] ?? payload['latitude'],
+      'lng': payload['lng'] ?? payload['longitude'],
+      if (payload.containsKey('timestampMs')) 'timestampMs': payload['timestampMs'],
+      if (payload.containsKey('timestamp_ms')) 'timestampMs': payload['timestamp_ms'],
+    }..removeWhere((key, value) => value == null);
+
     return TripEvent(
       id: id ?? const Uuid().v4(),
       tripId: tripId,
       type: 'gpsUpdate',
-      payload: payload,
+      payload: normalizedPayload,
       occurredAt: occurredAt ?? DateTime.now().toUtc().toIso8601String(),
       syncStatus: syncStatus,
       retryCount: retryCount,

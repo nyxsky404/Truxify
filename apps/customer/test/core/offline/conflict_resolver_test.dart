@@ -14,8 +14,8 @@ void main() {
 
       final resolved = resolver.resolve(events);
 
-      expect(resolved, hasLength(2));
-      expect(resolved.last.payload['lat'], 12.1);
+      expect(resolved, hasLength(1));
+      expect(resolved.single.payload['lat'], 12.1);
     });
 
     test('deduplicates OTP delivery events by trip and stop', () {

@@ -53,8 +53,8 @@ class OfflineEventDb {
     final db = await open();
     final rows = await db.query(
       _tableName,
-      where: 'sync_status = ?',
-      whereArgs: ['pending'],
+      where: 'sync_status IN (?, ?)',
+      whereArgs: ['pending', 'failed'],
       orderBy: 'occurred_at ASC',
       limit: limit,
     );
