@@ -233,6 +233,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
 
     if (!serviceEnabled) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enable location service')),
       );
@@ -247,6 +248,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Location permission denied')),
       );
@@ -259,6 +261,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
     await _setLocation(point);
   } catch (_) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Unable to fetch current location')),
     );
