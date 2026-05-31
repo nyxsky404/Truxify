@@ -2,15 +2,13 @@ import { WebSocketServer } from 'ws';
 import { mongoDb, redisClient, firebaseAdmin } from '../config/db.js';
 
 // In-memory mapping of active client subscriptions
-// Key: order_display_id or driver_id
-// Value: Set of WebSocket client connections
 const trackingSubscriptions = new Map();
 
 // =====================================================================
 // 📦 EXTRA STORAGE & BUFFER CONFIGURATIONS (#269)
 // =====================================================================
 let telemetryWriteBuffer = [];
-const BUFFER_FLUSH_INTERVAL_MS = 20000; // 20-second sliding time window
+const BUFFER_FLUSH_INTERVAL_MS = 20000; 
 let isSchedulerActive = false;
 
 /**
@@ -19,7 +17,6 @@ let isSchedulerActive = false;
 export function initWebSocketServer(server) {
   const wss = new WebSocketServer({ noServer: true });
 
-  // Handle upgrade event manually to allow authentication or path matching
   server.on('upgrade', (request, socket, head) => {
     const pathname = new URL(request.url, 'http://localhost').pathname;
 
@@ -33,7 +30,6 @@ export function initWebSocketServer(server) {
   });
 
   wss.on('connection', async (ws, req) => {
-    // Replace legacy url.parse with new URL
     const reqUrl = new URL(req.url, 'http://localhost');
     const token    = reqUrl.searchParams.get('token');
     const bypassAuth = process.env.BYPASS_AUTH === 'true';
@@ -60,7 +56,6 @@ export function initWebSocketServer(server) {
     console.log('🔌 New WebSocket connection established on /ws/tracking');
     ws.isAlive = true;
 
-    // Ping-pong to detect dead connections
     ws.on('pong', () => {
       ws.isAlive = true;
     });
@@ -107,7 +102,6 @@ export function initWebSocketServer(server) {
     });
   });
 
-  // Keep-alive polling interval every 30 seconds
   const interval = setInterval(() => {
     wss.clients.forEach((ws) => {
       if (ws.isAlive === false) {
@@ -123,7 +117,6 @@ export function initWebSocketServer(server) {
     clearInterval(interval);
   });
 
-  // Automatically spin up the DB batch flushing system thread
   if (!isSchedulerActive) {
     initTelemetryScheduler();
   }
@@ -133,7 +126,6 @@ export function initWebSocketServer(server) {
 
 /**
  * Handle incoming GPS coordinate telemetry from a driver app
- * Data properties: driver_id, order_display_id, latitude, longitude, speed, bearing, device_timestamp
  */
 async function handleLocationPing(ws, data) {
   const { driver_id, order_display_id, latitude, longitude, speed, bearing, device_timestamp } = data;
@@ -142,8 +134,17 @@ async function handleLocationPing(ws, data) {
     return ws.send(JSON.stringify({ error: 'Missing mandatory tracking parameters (driver_id, lat, lng).' }));
   }
 
-  // Use explicit device incoming timestamp or fall back to current server clock safely
-  const currentPingTime = device_timestamp ? new Date(device_timestamp) : new Date();
+  // 🛡️ ADJUSTMENT 2: Device Timestamp Strict Validation
+  let currentPingTime = new Date();
+  if (device_timestamp) {
+    const parsedEpoch = Date.parse(device_timestamp);
+    if (isNaN(parsedEpoch)) {
+      console.error(`[TRUXIFY VALIDATION ERROR] Malformed device_timestamp received from driver: ${driver_id}. Falling back to server time.`);
+      // Prevent poisoning the Redis sequence cache with an incorrect epoch layout
+    } else {
+      currentPingTime = new Date(parsedEpoch);
+    }
+  }
   const incomingEpoch = currentPingTime.getTime();
 
   // 🛡️ 1. IDEMPOTENCY GATE & OUT-OF-ORDER SEQUENCER
@@ -155,22 +156,19 @@ async function handleLocationPing(ws, data) {
       if (lastRecordedEpochStr) {
         const lastRecordedEpoch = parseInt(lastRecordedEpochStr, 10);
         
-        // If arriving frame is older or matches current timeline sequence (Jitter drop), terminate pipeline execution
         if (incomingEpoch <= lastRecordedEpoch) {
           console.warn(`[TRUXIFY SEQUENCE CONTROL] Out-of-order telemetry dropped for Driver: ${driver_id}. Stale jitter detected.`);
           return;
         }
       }
       
-      // Update high-speed caching with current epoch sequence checkpoint
-      await redisClient.set(seqKey, incomingEpoch.toString(), 'EX', 86400); // 24hr retention limit
+      await redisClient.set(seqKey, incomingEpoch.toString(), 'EX', 86400); 
     } catch (err) {
       console.error('Redis sequence verification cache error:', err.message);
     }
   }
 
   // 🛡️ 2. WRITE-BUFFER DEFERMENT (BATCHING)
-  // Instead of pushing to MongoDB on every single ping, append array snapshots to buffer layout
   telemetryWriteBuffer.push({
     driver_id,
     order_display_id: order_display_id || null,
@@ -184,7 +182,6 @@ async function handleLocationPing(ws, data) {
     buffered_at: new Date()
   });
 
-  // 3. Cache current location in Redis with 2 minutes expiry (Upstash telemetry fallback)
   if (redisClient) {
     try {
       const redisKey = `driver:location:${driver_id}`;
@@ -199,7 +196,6 @@ async function handleLocationPing(ws, data) {
     }
   }
 
-  // 4. Broadcast to all clients subscribed to this driver's telemetry stream
   const broadcastPayload = JSON.stringify({
     event: 'location_update',
     data: {
@@ -213,17 +209,15 @@ async function handleLocationPing(ws, data) {
     }
   });
 
-  // Broadcast to subscribers of order
   if (order_display_id && trackingSubscriptions.has(order_display_id)) {
     const clients = trackingSubscriptions.get(order_display_id);
     clients.forEach((client) => {
-      if (client.readyState === 1) { // OPEN
+      if (client.readyState === 1) { 
         client.send(broadcastPayload);
       }
     });
   }
 
-  // Broadcast to subscribers of driver
   if (trackingSubscriptions.has(driver_id)) {
     const clients = trackingSubscriptions.get(driver_id);
     clients.forEach((client) => {
@@ -235,34 +229,45 @@ async function handleLocationPing(ws, data) {
 }
 
 /**
- * Periodically dumps the aggregated batch matrix logs into MongoDB Atlas database collections
+ * Periodically dumps the aggregated batch matrix logs into MongoDB Atlas
  */
 async function flushTelemetryBuffer() {
   if (telemetryWriteBuffer.length === 0) return;
 
-  // Clone current buffer block state and isolate storage arrays instantly
+  // 🛡️ ADJUSTMENT 1: Move database client check to the absolute top to avoid buffer data loss
+  if (!mongoDb) {
+    console.error('[TRUXIFY STORAGE WARN] MongoDB is not initialized or disconnected. Retaining telemetry logs in memory buffer.');
+    return; // Fast return without clearing the active local telemetryWriteBuffer
+  }
+
+  // Now it's perfectly safe to slice and isolate the buffer arrays
   const recordsToFlush = [...telemetryWriteBuffer];
   telemetryWriteBuffer = [];
 
   console.log(`[TRUXIFY BATCH CONTROL] Committing bulk cluster of ${recordsToFlush.length} spatial rows to MongoDB...`);
 
-  if (mongoDb) {
-    try {
-      const collection = mongoDb.collection('live_gps_pings');
-      // Bulk insert array elements simultaneously
-      await collection.insertMany(recordsToFlush, { ordered: false });
-      console.log(`[TRUXIFY DB SUCCESS] Successfully flushed ${recordsToFlush.length} records to MongoDB clusters.`);
-    } catch (err) {
-      console.error('Mongo bulk insert telemetry logs crashed:', err.message);
-      // Recovery track: re-insert frames back into execution pools
+  try {
+    const collection = mongoDb.collection('live_gps_pings');
+    await collection.insertMany(recordsToFlush, { ordered: false });
+    console.log(`[TRUXIFY DB SUCCESS] Successfully flushed ${recordsToFlush.length} records to MongoDB clusters.`);
+  } catch (err) {
+    console.error('Mongo bulk insert telemetry logs error:', err.message);
+
+    // 🛡️ ADJUSTMENT 3: Refined Retry Strategy to prevent memory bloat
+    // Check if the error code/message relates to a persistent schema validation breakdown or structural malformation
+    const isValidationError = err.code === 121 || err.message.includes('Document failed validation');
+
+    if (isValidationError) {
+      console.error(`[TRUXIFY FATAL DATA DROP] Discarding malformed tracking block payloads to prevent infinite loop memory bloat.`);
+      // Do NOT re-queue these records since they will fail indefinitely and consume stack space
+    } else {
+      console.warn(`[TRUXIFY RETRY LOGIC] Transient cluster error detected. Re-injecting ${recordsToFlush.length} frames back to buffer pool.`);
+      // Re-insert frames back into execution pools for transient timeouts/network issues
       telemetryWriteBuffer = [...recordsToFlush, ...telemetryWriteBuffer];
     }
   }
 }
 
-/**
- * Initializes sliding scheduler clock cycles
- */
 function initTelemetryScheduler() {
   isSchedulerActive = true;
   setInterval(async () => {
@@ -270,9 +275,6 @@ function initTelemetryScheduler() {
   }, BUFFER_FLUSH_INTERVAL_MS);
 }
 
-/**
- * Subscribe a customer socket to location broadcasts for an order or driver
- */
 function handleSubscribe(ws, data) {
   const { order_display_id, driver_id } = data;
   const targetId = order_display_id || driver_id;
@@ -290,9 +292,6 @@ function handleSubscribe(ws, data) {
   ws.send(JSON.stringify({ status: 'subscribed', target: targetId }));
 }
 
-/**
- * Unsubscribe a customer socket from location broadcasts
- */
 function handleUnsubscribe(ws, data) {
   const { order_display_id, driver_id } = data;
   const targetId = order_display_id || driver_id;
@@ -304,16 +303,12 @@ function handleUnsubscribe(ws, data) {
   }
 }
 
-/**
- * Cleanup client socket from tracking logs on connection drop
- */
 function removeClientFromAllSubscriptions(ws) {
   trackingSubscriptions.forEach((clients, key) => {
     if (clients.has(ws)) {
       clients.delete(ws);
       console.log(`🔌 Removed socket subscription from "${key}" due to disconnect.`);
     }
-    // Clean up empty subscription groups
     if (clients.size === 0) {
       trackingSubscriptions.delete(key);
     }
