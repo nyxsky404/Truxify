@@ -36,7 +36,7 @@ class AppCard extends StatelessWidget {
     final card = Container(
       margin: margin,
       decoration: BoxDecoration(
-        color: color,
+        color: cardColor,
         borderRadius: BorderRadius.circular(14),
         border: border ??
             Border.all(
@@ -171,7 +171,11 @@ class OutlinedAccentButton extends StatelessWidget {
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
           foregroundColor: foregroundColor,
-          side: BorderSide(color: TruxifyColors.border),
+          side: BorderSide(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? TruxifyColors.darkBorder
+                : TruxifyColors.border,
+          ),
           minimumSize: const Size.fromHeight(48),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
