@@ -50,14 +50,16 @@ class _TripsScreenState extends State<TripsScreen> {
       final stopsByTrip = <String, List<Map<String, dynamic>>>{};
       final routePointsByTrip = <String, List<Map<String, dynamic>>>{};
 
-      for (final trip in trips) {
+      await Future.wait(trips.map((trip) async {
         final tripId = trip['trip_display_id'].toString();
+        final results = await Future.wait([
+          _tripService.fetchTripStops(tripId),
+          _tripService.fetchRouteMapPoints(tripId),
+        ]);
+        stopsByTrip[tripId] = results[0];
+        routePointsByTrip[tripId] = results[1];
+      }));
 
-        stopsByTrip[tripId] = await _tripService.fetchTripStops(tripId);
-
-        routePointsByTrip[tripId] =
-            await _tripService.fetchRouteMapPoints(tripId);
-      }
       if (!mounted) return;
 
       setState(() {
