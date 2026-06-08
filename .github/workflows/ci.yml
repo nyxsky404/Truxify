@@ -48,6 +48,10 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Get shared dependencies
+        working-directory: packages/truxify_shared
+        run: flutter pub get
+
       - name: Get dependencies
         working-directory: apps/customer
         run: flutter pub get
@@ -73,6 +77,10 @@ jobs:
         with:
           channel: stable
           cache: true
+
+      - name: Get shared dependencies
+        working-directory: packages/truxify_shared
+        run: flutter pub get
 
       - name: Get dependencies
         working-directory: apps/driver
