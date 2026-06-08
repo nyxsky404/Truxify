@@ -58,6 +58,8 @@ class _EarningsScreenState extends State<EarningsScreen> {
             item['day_date'].toString(): EarningsDailyModel.fromMap(item),
         };
       });
+    } catch (e) {
+      debugPrint('Failed to load monthly earnings: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -66,26 +68,34 @@ class _EarningsScreenState extends State<EarningsScreen> {
   }
 
   Future<void> _loadSelectedDayTrips() async {
-    final trips = await _earningsService.fetchCompletedTripsForDay(
-      date: _selectedDate,
-    );
+    try {
+      final trips = await _earningsService.fetchCompletedTripsForDay(
+        date: _selectedDate,
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _selectedDayTrips = trips;
-    });
+      setState(() {
+        _selectedDayTrips = trips;
+      });
+    } catch (e) {
+      debugPrint('Failed to load selected day trips: $e');
+    }
   }
 
   Future<void> _loadPendingPayments() async {
-    final transactions = await _earningsService.fetchWalletTransactions();
+    try {
+      final transactions = await _earningsService.fetchWalletTransactions();
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _pendingPayments =
-          transactions.where((txn) => txn['status'] == 'pending').toList();
-    });
+      setState(() {
+        _pendingPayments =
+            transactions.where((txn) => txn['status'] == 'pending').toList();
+      });
+    } catch (e) {
+      debugPrint('Failed to load pending payments: $e');
+    }
   }
 
   String _getDateKey(DateTime date) {

@@ -4,9 +4,10 @@ import '../models/app_models.dart';
 import '../models/marketplace_models.dart';
 
 class MarketplaceRepository {
-  MarketplaceRepository({SupabaseClient? client}) : _client = client ?? Supabase.instance.client;
+  MarketplaceRepository({SupabaseClient? client}) : _providedClient = client;
 
-  final SupabaseClient _client;
+  final SupabaseClient? _providedClient;
+  SupabaseClient get _client => _providedClient ?? Supabase.instance.client;
 
   Future<List<LoadOffer>> fetchLoadOffers() async {
     final rows = await _client

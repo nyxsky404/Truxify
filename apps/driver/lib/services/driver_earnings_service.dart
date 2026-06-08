@@ -2,9 +2,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DriverEarningsService {
   DriverEarningsService({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+      : _providedClient = client;
 
-  final SupabaseClient _client;
+  final SupabaseClient? _providedClient;
+  SupabaseClient get _client => _providedClient ?? Supabase.instance.client;
 
   String? get driverId => _client.auth.currentUser?.id;
 
