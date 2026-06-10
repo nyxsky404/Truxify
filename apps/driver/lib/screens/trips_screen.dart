@@ -22,7 +22,8 @@ class TripsScreen extends StatefulWidget {
 
 class _TripsScreenState extends State<TripsScreen> {
   int _selectedChipIndex = 0; // 0: All, 1: Active, 2: Completed, 3: Cancelled
-  int _selectedSortIndex = 0; // 0: Newest, 1: Oldest, 2: Highest, 3: Lowest, 4: By status
+  int _selectedSortIndex =
+      0; // 0: Newest, 1: Oldest, 2: Highest, 3: Lowest, 4: By status
   int _topTabIndex = 0; // 0: Trips, 1: Marketplace
 
   RealtimeChannel? _bidChannel;
@@ -44,7 +45,8 @@ class _TripsScreenState extends State<TripsScreen> {
     if (!SupabaseConfig.isConfigured) {
       setState(() {
         _marketplaceLoading = false;
-        _marketplaceError = 'Supabase is not configured. Pass --dart-define=SUPABASE_URL=... and --dart-define=SUPABASE_ANON_KEY=...';
+        _marketplaceError =
+            'Supabase is not configured. Pass --dart-define=SUPABASE_URL=... and --dart-define=SUPABASE_ANON_KEY=...';
       });
       return;
     }
@@ -61,13 +63,16 @@ class _TripsScreenState extends State<TripsScreen> {
       final results = await Future.wait([
         _marketplaceRepository.fetchLoadOffers(),
         _marketplaceRepository.fetchEnRouteLoads(),
-        _marketplaceRepository.fetchDriverBids(driverId: DriverSession.driverId),
+        _marketplaceRepository.fetchDriverBids(
+            driverId: DriverSession.driverId),
       ]);
 
       final standardLoads = results[0] as List<LoadOffer>;
       final enRouteLoads = results[1] as List<LoadOffer>;
       final bids = results[2] as List<DriverBid>;
-      final bidsByLoad = <String, DriverBid>{for (final bid in bids) bid.loadId: bid};
+      final bidsByLoad = <String, DriverBid>{
+        for (final bid in bids) bid.loadId: bid
+      };
 
       if (!mounted) return;
       setState(() {
@@ -101,7 +106,8 @@ class _TripsScreenState extends State<TripsScreen> {
       _refreshMarketplace();
       _subscribeToRealtime();
     } else {
-      _marketplaceError = 'Supabase is not configured. Pass --dart-define=SUPABASE_URL=... and --dart-define=SUPABASE_ANON_KEY=...';
+      _marketplaceError =
+          'Supabase is not configured. Pass --dart-define=SUPABASE_URL=... and --dart-define=SUPABASE_ANON_KEY=...';
     }
   }
 
@@ -420,6 +426,7 @@ class _TripsScreenState extends State<TripsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final allTrips = _trips.isNotEmpty
         ? _mapSupabaseTripsToUiTrips()
         : _getFilteredAndSortedTrips();
@@ -451,13 +458,16 @@ class _TripsScreenState extends State<TripsScreen> {
                         style: GoogleFonts.dmSans(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: TruxifyColors.primaryText,
+                          color: isDark
+                              ? TruxifyColors.accent
+                              : TruxifyColors.primaryText,
                         ),
                       ),
                       const SizedBox(width: 10),
                       _TopTabToggle(
                         index: _topTabIndex,
-                        onChanged: (value) => setState(() => _topTabIndex = value),
+                        onChanged: (value) =>
+                            setState(() => _topTabIndex = value),
                       ),
                     ],
                   ),
@@ -503,12 +513,14 @@ class _TripsScreenState extends State<TripsScreen> {
                     standardLoads: _marketplaceLoads,
                     enRouteLoads: _enRouteLoads,
                     bidsByLoadId: _bidsByLoadId,
-                    onOpenLoad: (load) => Navigator.of(context).pushNamed(AppRoutes.loadDetail, arguments: load),
+                    onOpenLoad: (load) => Navigator.of(context)
+                        .pushNamed(AppRoutes.loadDetail, arguments: load),
                     onSubmitBid: (load, amount) async {
                       final loadId = load.id;
                       if (loadId.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('This load is missing an id.')),
+                          const SnackBar(
+                              content: Text('This load is missing an id.')),
                         );
                         return;
                       }
@@ -520,10 +532,14 @@ class _TripsScreenState extends State<TripsScreen> {
                         );
                         if (!context.mounted) return;
                         setState(() {
-                          _bidsByLoadId = <String, DriverBid>{..._bidsByLoadId, bid.loadId: bid};
+                          _bidsByLoadId = <String, DriverBid>{
+                            ..._bidsByLoadId,
+                            bid.loadId: bid
+                          };
                         });
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Bid submitted (Pending).')),
+                          const SnackBar(
+                              content: Text('Bid submitted (Pending).')),
                         );
                       } catch (e) {
                         if (!context.mounted) return;
@@ -536,83 +552,88 @@ class _TripsScreenState extends State<TripsScreen> {
                 ),
               )
             else
-            // Summary Strip
-            Container(
-              color: Theme.of(context).colorScheme.surface,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      children: [
-                        Text(
-                          '24',
-                          style: GoogleFonts.dmSans(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: TruxifyColors.accent,
+              // Summary Strip
+              Container(
+                color: Theme.of(context).colorScheme.surface,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Text(
+                            '24',
+                            style: GoogleFonts.dmSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: TruxifyColors.accent,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Total trips',
-                          style: GoogleFonts.dmSans(
-                            fontSize: 10,
-                            color: TruxifyColors.adaptiveSecondaryText(context),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Total trips',
+                            style: GoogleFonts.dmSans(
+                              fontSize: 10,
+                              color:
+                                  TruxifyColors.adaptiveSecondaryText(context),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  Container(width: 1, height: 32, color: TruxifyColors.border),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        Text(
-                          '₹1.2L',
-                          style: GoogleFonts.dmSans(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: TruxifyColors.accent,
+                    Container(
+                        width: 1, height: 32, color: TruxifyColors.border),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Text(
+                            '₹1.2L',
+                            style: GoogleFonts.dmSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: TruxifyColors.accent,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Total earned',
-                          style: GoogleFonts.dmSans(
-                            fontSize: 10,
-                            color: TruxifyColors.adaptiveSecondaryText(context),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Total earned',
+                            style: GoogleFonts.dmSans(
+                              fontSize: 10,
+                              color:
+                                  TruxifyColors.adaptiveSecondaryText(context),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  Container(width: 1, height: 32, color: TruxifyColors.border),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        Text(
-                          '97%',
-                          style: GoogleFonts.dmSans(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: TruxifyColors.accent,
+                    Container(
+                        width: 1, height: 32, color: TruxifyColors.border),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Text(
+                            '97%',
+                            style: GoogleFonts.dmSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: TruxifyColors.accent,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Completion',
-                          style: GoogleFonts.dmSans(
-                            fontSize: 10,
-                            color: TruxifyColors.adaptiveSecondaryText(context),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Completion',
+                            style: GoogleFonts.dmSans(
+                              fontSize: 10,
+                              color:
+                                  TruxifyColors.adaptiveSecondaryText(context),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
             Container(height: 1, color: TruxifyColors.border),
 
             // Filter Chips
@@ -637,11 +658,17 @@ class _TripsScreenState extends State<TripsScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 6),
                       decoration: BoxDecoration(
-                        color: isSelected ? TruxifyColors.accent : Colors.white,
+                        color: isSelected
+                            ? TruxifyColors.accent
+                            : (isDark
+                                ? TruxifyColors.darkSecondaryBackground
+                                : Colors.white),
                         border: Border.all(
                           color: isSelected
                               ? TruxifyColors.accent
-                              : TruxifyColors.border,
+                              : (isDark
+                                  ? TruxifyColors.darkBorder
+                                  : TruxifyColors.border),
                         ),
                         borderRadius: BorderRadius.circular(20),
                       ),
@@ -1026,10 +1053,15 @@ class _TopTabToggle extends StatelessWidget {
           child: Text(
             label,
             style: GoogleFonts.dmSans(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: selected ? TruxifyColors.accentDark : TruxifyColors.secondaryText,
-            ),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? selected
+                        ? TruxifyColors.accentDark
+                        : TruxifyColors.strongBorder
+                    : selected
+                        ? TruxifyColors.accentDark
+                        : TruxifyColors.primaryText),
           ),
         ),
       );
@@ -1085,7 +1117,8 @@ class _MarketplaceBody extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Could not load marketplace', style: Theme.of(context).textTheme.titleMedium),
+                Text('Could not load marketplace',
+                    style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
                 Text(error!, style: Theme.of(context).textTheme.bodyMedium),
                 const SizedBox(height: 14),
@@ -1150,7 +1183,10 @@ class _MarketplaceBody extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             'Some data may be out of date. Last error: $error',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: TruxifyColors.secondaryText),
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: TruxifyColors.secondaryText),
           ),
         ],
       ],
@@ -1174,12 +1210,21 @@ class _LoadOfferCard extends StatelessWidget {
   StatusPill _pillFor(BidStatus status) {
     switch (status) {
       case BidStatus.accepted:
-        return const StatusPill(label: 'Accepted', backgroundColor: TruxifyColors.successLight, foregroundColor: TruxifyColors.success);
+        return const StatusPill(
+            label: 'Accepted',
+            backgroundColor: TruxifyColors.successLight,
+            foregroundColor: TruxifyColors.success);
       case BidStatus.rejected:
-        return const StatusPill(label: 'Rejected', backgroundColor: TruxifyColors.errorLight, foregroundColor: TruxifyColors.error);
+        return const StatusPill(
+            label: 'Rejected',
+            backgroundColor: TruxifyColors.errorLight,
+            foregroundColor: TruxifyColors.error);
       case BidStatus.pending:
       default:
-        return const StatusPill(label: 'Pending', backgroundColor: TruxifyColors.warningLight, foregroundColor: TruxifyColors.warning);
+        return const StatusPill(
+            label: 'Pending',
+            backgroundColor: TruxifyColors.warningLight,
+            foregroundColor: TruxifyColors.warning);
     }
   }
 
@@ -1199,10 +1244,15 @@ class _LoadOfferCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(load.route, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                    Text(load.route,
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800)),
                     if (load.routeSubtitle.isNotEmpty) ...[
                       const SizedBox(height: 4),
-                      Text(load.routeSubtitle, style: Theme.of(context).textTheme.bodySmall),
+                      Text(load.routeSubtitle,
+                          style: Theme.of(context).textTheme.bodySmall),
                     ],
                   ],
                 ),
@@ -1217,8 +1267,11 @@ class _LoadOfferCard extends StatelessWidget {
             children: [
               _MetaChip(icon: Icons.inventory_2_rounded, label: load.goods),
               _MetaChip(icon: Icons.scale_rounded, label: load.weight),
-              _MetaChip(icon: Icons.account_balance_wallet_rounded, label: load.freightValue),
-              _MetaChip(icon: Icons.trending_up_rounded, label: load.estimatedProfit),
+              _MetaChip(
+                  icon: Icons.account_balance_wallet_rounded,
+                  label: load.freightValue),
+              _MetaChip(
+                  icon: Icons.trending_up_rounded, label: load.estimatedProfit),
             ],
           ),
           const SizedBox(height: 12),
@@ -1227,7 +1280,10 @@ class _LoadOfferCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Est. profit: ${load.netProfit}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
               TextButton(
@@ -1237,15 +1293,18 @@ class _LoadOfferCard extends StatelessWidget {
                     isScrollControlled: true,
                     backgroundColor: TruxifyColors.cardBackground,
                     shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(24)),
                     ),
-                    builder: (_) => _BidBottomSheet(load: load, existingBid: bid),
+                    builder: (_) =>
+                        _BidBottomSheet(load: load, existingBid: bid),
                   );
                   if (result != null) {
                     await onBid(result);
                   }
                 },
-                style: TextButton.styleFrom(foregroundColor: TruxifyColors.accent),
+                style:
+                    TextButton.styleFrom(foregroundColor: TruxifyColors.accent),
                 child: Text(bid == null ? 'Bid' : 'Update bid'),
               ),
             ],
@@ -1278,7 +1337,10 @@ class _MetaChip extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: TruxifyColors.primaryText),
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: TruxifyColors.primaryText),
           ),
         ],
       ),
@@ -1326,16 +1388,25 @@ class _BidBottomSheetState extends State<_BidBottomSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, 10, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+      padding: EdgeInsets.fromLTRB(
+          20, 10, 20, MediaQuery.of(context).viewInsets.bottom + 20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const BottomSheetHandle(),
           const SizedBox(height: 16),
-          Text('Submit bid', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+          Text('Submit bid',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w800)),
           const SizedBox(height: 4),
-          Text(widget.load.route, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: TruxifyColors.secondaryText)),
+          Text(widget.load.route,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: TruxifyColors.secondaryText)),
           const SizedBox(height: 16),
           TextField(
             controller: _controller,
