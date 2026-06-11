@@ -21,15 +21,23 @@ class TripDetailScreen extends StatefulWidget {
 
 class _TripDetailScreenState extends State<TripDetailScreen> {
   final MapController _mapController = MapController();
-  _RouteResult? _cachedRoute;
+  late Future<_RouteResult?> _routeFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _routeFuture = _loadRouteForTrip(widget.trip.route);
+  }
+
   @override
   void dispose() {
     _mapController.dispose();
     super.dispose();
   }
   Future<void> _openGoogleMapsRoute() async {
-    final start = _cachedRoute?.start;
-    final end = _cachedRoute?.end;
+    final routeResult = await _routeFuture;
+    final start = routeResult?.start;
+    final end = routeResult?.end;
 
     if (start == null || end == null) {
       if (mounted) {
@@ -391,7 +399,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     SizedBox(
                       height: 180,
                       child: FutureBuilder<_RouteResult?>(
-                        future: _loadRouteForTrip(trip.route),
+                        future: _routeFuture,
                         builder: (context, snap) {
                           if (snap.connectionState != ConnectionState.done) {
                             return Container(
@@ -799,7 +807,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       }
 
       final result = _RouteResult(start: start, end: end, routePoints: routePoints);
-      if (mounted) setState(() => _cachedRoute = result);
       return result;
     } catch (_) {
       return null;
