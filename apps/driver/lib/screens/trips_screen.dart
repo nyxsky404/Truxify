@@ -408,7 +408,9 @@ class _TripsScreenState extends State<TripsScreen> {
               label,
               style: GoogleFonts.dmSans(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface,
+                color: isSelected
+                    ? Colors.black87
+                    : Theme.of(context).colorScheme.onSurface,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
@@ -451,7 +453,7 @@ class _TripsScreenState extends State<TripsScreen> {
                         style: GoogleFonts.dmSans(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: TruxifyColors.primaryText,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(width: 10),

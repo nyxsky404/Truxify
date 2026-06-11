@@ -32,7 +32,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -190,7 +190,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F3F3),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         leading: const BackButton(color: TruxifyColors.primaryText),
         title: Text(
@@ -327,7 +327,10 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                             Text(
                               'Earnings',
                               style: GoogleFonts.dmSans(
-                                color: Colors.white.withOpacity(0.5),
+                                color:Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.6),
                                 fontSize: 10,
                               ),
                             ),
