@@ -5,6 +5,9 @@ import 'package:truxify/widgets/menu_item.dart';
 
 import '../controllers/app_controller.dart';
 import '../core/offline/cache/cache_manager.dart';
+import '../repositories/address_repository.dart';
+import '../repositories/payment_repository.dart';
+import '../services/profile_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_page_route.dart';
 import 'about_screen.dart';
@@ -24,16 +27,20 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  static const _profileName = 'Karthik Murugan';
-  static const _companyName = 'Sri Murugan Textiles';
-  static const _phoneNumber = '+91 98765 43210';
-
+  final _profileService = ProfileService();
+  final _paymentRepo = PaymentRepository();
+  final _addressRepo = AddressRepository();
   final CacheManager _cacheManager = CacheManager();
   bool _isOffline = false;
   String? _lastUpdatedLabel;
-  String _displayName = _profileName;
-  String _displayCompany = _companyName;
-  String _displayPhone = _phoneNumber;
+  String _displayName = '';
+  String _displayCompany = '';
+  String _displayPhone = '';
+  String? _defaultPaymentLabel;
+  String? _defaultAddressLabel;
+  int _totalOrders = 0;
+  num _totalSaved = 0;
+  num _co2ReducedKg = 0;
 
   @override
   void initState() {
@@ -44,21 +51,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadProfile() async {
     final connectivity = await Connectivity().checkConnectivity();
     final hasNetwork = connectivity.isNotEmpty && !connectivity.contains(ConnectivityResult.none);
+
     await _cacheManager.open();
-    await _cacheManager.cacheProfile({
-      'name': _profileName,
-      'company': _companyName,
-      'phone': _phoneNumber,
-    });
+
+    if (hasNetwork) {
+      try {
+        final profileResponse = await _profileService.fetchProfile();
+        final profile = profileResponse['profile'] as Map<String, dynamic>?;
+        final extra = profileResponse['extra'] as Map<String, dynamic>?;
+
+        if (profile != null) {
+          await _cacheManager.cacheProfile({
+            'name': profile['fullName']?.toString() ?? '',
+            'company': profile['companyName']?.toString() ?? '',
+            'phone': profile['phone']?.toString() ?? '',
+          });
+        }
+
+        final methods = await _paymentRepo.fetchAll();
+        final addresses = await _addressRepo.fetchAll();
+
+        if (!mounted) return;
+
+        setState(() {
+          _isOffline = false;
+          _displayName = profile?['fullName']?.toString() ?? '';
+          _displayCompany = profile?['companyName']?.toString() ?? '';
+          _displayPhone = profile?['phone']?.toString() ?? '';
+          _defaultPaymentLabel = methods.where((m) => m.isDefault).isNotEmpty
+              ? methods.firstWhere((m) => m.isDefault).displayLabel
+              : null;
+          _defaultAddressLabel = addresses.where((a) => a.isDefault).isNotEmpty
+              ? addresses.firstWhere((a) => a.isDefault).label
+              : null;
+          _totalOrders = extra?['totalOrders'] ?? 0;
+          _totalSaved = extra?['totalSaved'] ?? 0;
+          _co2ReducedKg = extra?['co2ReducedKg'] ?? 0;
+          _lastUpdatedLabel = DateTime.now().toIso8601String();
+        });
+        return;
+      } catch (e) {
+        debugPrint('Failed to load profile from backend: $e');
+      }
+    }
 
     final cachedProfile = await _cacheManager.getProfile();
     if (!mounted) return;
 
     setState(() {
       _isOffline = !hasNetwork;
-      _displayName = cachedProfile?['name']?.toString() ?? _profileName;
-      _displayCompany = cachedProfile?['company']?.toString() ?? _companyName;
-      _displayPhone = cachedProfile?['phone']?.toString() ?? _phoneNumber;
+      _displayName = cachedProfile?['name']?.toString() ?? '';
+      _displayCompany = cachedProfile?['company']?.toString() ?? '';
+      _displayPhone = cachedProfile?['phone']?.toString() ?? '';
       _lastUpdatedLabel = cachedProfile?['_cached_at']?.toString();
     });
   }
@@ -171,7 +215,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               offset: const Offset(0, -18),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _StatsCard(),
+                child: _StatsCard(
+                  totalOrders: _totalOrders,
+                  totalSaved: _totalSaved,
+                  co2ReducedKg: _co2ReducedKg,
+                ),
               ),
             ),
             const SizedBox(height: 10),
@@ -186,6 +234,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   MenuItem(
                     icon: Icons.credit_card_rounded,
                     label: 'Payment Methods',
+                    trailing: _defaultPaymentLabel,
                     onTap: () => Navigator.of(context).push(AppPageRoute(
                         builder: (_) => const PaymentMethodsScreen())),
                   ),
@@ -198,6 +247,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   MenuItem(
                     icon: Icons.location_on_rounded,
                     label: 'Saved Addresses',
+                    trailing: _defaultAddressLabel,
                     showDivider: false,
                     onTap: () => Navigator.of(context).push(AppPageRoute(
                         builder: (_) => const SavedAddressesScreen())),
@@ -289,6 +339,16 @@ class _SectionLabel extends StatelessWidget {
 }
 
 class _StatsCard extends StatelessWidget {
+  const _StatsCard({
+    required this.totalOrders,
+    required this.totalSaved,
+    required this.co2ReducedKg,
+  });
+
+  final int totalOrders;
+  final num totalSaved;
+  final num co2ReducedKg;
+
   @override
   Widget build(BuildContext context) {
     final surface = Theme.of(context).colorScheme.surface;
@@ -309,7 +369,7 @@ class _StatsCard extends StatelessWidget {
         children: [
           Expanded(
             child: _StatColumn(
-              value: '28',
+              value: '$totalOrders',
               label: 'Orders',
               valueSize: 20,
               addRightDivider: true,
@@ -318,7 +378,8 @@ class _StatsCard extends StatelessWidget {
           ),
           Expanded(
             child: _StatColumn(
-              value: '₹42.8k',
+              value:
+                  '₹${(totalSaved / 100).toStringAsFixed(totalSaved % 100 == 0 ? 0 : 2)}',
               label: 'Saved',
               valueSize: 16,
               addRightDivider: true,
@@ -327,7 +388,7 @@ class _StatsCard extends StatelessWidget {
           ),
           Expanded(
             child: _StatColumn(
-              value: '124',
+              value: '$co2ReducedKg',
               label: 'kg CO2',
               valueSize: 20,
               dividerColor: dividerColor,
