@@ -130,6 +130,7 @@ erDiagram
 ### Enforced foreign keys
 
 * `driver_details.user_id → profiles.id` with `ON DELETE CASCADE`
+* `driver_details.truck_id → trucks.id` with `ON DELETE SET NULL`
 * `customer_stats.user_id → profiles.id` with `ON DELETE CASCADE`
 * `trucks.driver_id → profiles.id` with `ON DELETE RESTRICT`
 * `orders.customer_id → profiles.id` with `ON DELETE RESTRICT`

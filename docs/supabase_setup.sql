@@ -101,10 +101,15 @@ create table if not exists driver_details (
 );
 
 create unique index if not exists idx_driver_details_user on driver_details (user_id);
+create index if not exists idx_driver_details_truck on driver_details (truck_id);
 alter table driver_details
   add constraint driver_details_user_id_fkey
   foreign key (user_id) references profiles(id)
   on update cascade on delete cascade;
+alter table driver_details
+  add constraint driver_details_truck_id_fkey
+  foreign key (truck_id) references trucks(id)
+  on update cascade on delete set null;
 
 
 -- ────────────────────────────────────────────────────────────────────────────

@@ -140,6 +140,11 @@ BEGIN
     RAISE EXCEPTION 'Pre-flight validation failed: orphaned records found in payment_methods.user_id referencing profiles.id';
   END IF;
 
+  -- 27. driver_details -> trucks (truck_id)
+  IF EXISTS (SELECT 1 FROM driver_details d LEFT JOIN trucks t ON d.truck_id = t.id WHERE d.truck_id IS NOT NULL AND t.id IS NULL) THEN
+    RAISE EXCEPTION 'Pre-flight validation failed: orphaned records found in driver_details.truck_id referencing trucks.id';
+  END IF;
+
   -- ==========================================================================
   -- Apply constraints
   -- ==========================================================================
@@ -379,6 +384,15 @@ BEGIN
       ON UPDATE CASCADE ON DELETE CASCADE;
   END IF;
 
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'driver_details_truck_id_fkey'
+  ) THEN
+    ALTER TABLE driver_details
+      ADD CONSTRAINT driver_details_truck_id_fkey
+      FOREIGN KEY (truck_id) REFERENCES trucks(id)
+      ON UPDATE CASCADE ON DELETE SET NULL;
+  END IF;
+
 END
 $$;
 
@@ -388,6 +402,7 @@ $$;
 CREATE INDEX IF NOT EXISTS idx_wallet_txn_order ON wallet_transactions (order_display_id);
 CREATE INDEX IF NOT EXISTS idx_wallet_txn_trip ON wallet_transactions (trip_display_id);
 CREATE INDEX IF NOT EXISTS idx_maint_tickets_driver ON truck_maintenance_tickets (driver_id);
+CREATE INDEX IF NOT EXISTS idx_driver_details_truck ON driver_details (truck_id);
 
 -- ============================================================================
 -- Rollback Instructions
@@ -421,8 +436,10 @@ CREATE INDEX IF NOT EXISTS idx_maint_tickets_driver ON truck_maintenance_tickets
 -- ALTER TABLE truck_maintenance_tickets DROP CONSTRAINT IF EXISTS truck_maintenance_tickets_driver_id_fkey;
 -- ALTER TABLE saved_addresses DROP CONSTRAINT IF EXISTS saved_addresses_user_id_fkey;
 -- ALTER TABLE payment_methods DROP CONSTRAINT IF EXISTS payment_methods_user_id_fkey;
+-- ALTER TABLE driver_details DROP CONSTRAINT IF EXISTS driver_details_truck_id_fkey;
 --
 -- DROP INDEX IF EXISTS idx_wallet_txn_order;
 -- DROP INDEX IF EXISTS idx_wallet_txn_trip;
 -- DROP INDEX IF EXISTS idx_maint_tickets_driver;
+-- DROP INDEX IF EXISTS idx_driver_details_truck;
 -- ============================================================================
