@@ -76,6 +76,16 @@ describe('Database Schema Constraints and RPC Upsert validation in supabase_setu
     expect(sqlContent).toMatch(/orders_driver_id_fkey[\s\S]*references\s+profiles\s*\(\s*id\s*\)[\s\S]*on delete set null/i);
     expect(sqlContent).toMatch(/load_bids_load_id_fkey[\s\S]*references\s+load_offers\s*\(\s*id\s*\)[\s\S]*on delete cascade/i);
     expect(sqlContent).toMatch(/wallet_transactions_trip_display_id_fkey[\s\S]*references\s+trips\s*\(\s*trip_display_id\s*\)[\s\S]*on delete restrict/i);
+    
+    // Validate operational/compliance foreign key constraints
+    expect(sqlContent).toMatch(/order_timeline_order_display_id_fkey[\s\S]*references\s+orders\s*\(\s*order_display_id\s*\)[\s\S]*on delete cascade/i);
+    expect(sqlContent).toMatch(/trip_items_trip_display_id_fkey[\s\S]*references\s+trips\s*\(\s*trip_display_id\s*\)[\s\S]*on delete cascade/i);
+    expect(sqlContent).toMatch(/documents_user_id_fkey[\s\S]*references\s+profiles\s*\(\s*id\s*\)[\s\S]*on delete cascade/i);
+
+    // Validate indexes
+    expect(sqlContent).toContain('idx_wallet_txn_order');
+    expect(sqlContent).toContain('idx_wallet_txn_trip');
+    expect(sqlContent).toContain('idx_maint_tickets_driver');
   });
 
   it('contains the unique constraint on earnings_daily(driver_id, day_date)', async () => {

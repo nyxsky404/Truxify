@@ -145,6 +145,16 @@ erDiagram
 * `wallet_transactions.trip_display_id → trips.trip_display_id` with `ON DELETE RESTRICT`
 * `notifications.user_id → profiles.id` with `ON DELETE RESTRICT`
 * `support_tickets.user_id → profiles.id` with `ON DELETE RESTRICT`
+* `order_timeline.order_display_id → orders.order_display_id` with `ON DELETE CASCADE`
+* `trip_items.trip_display_id → trips.trip_display_id` with `ON DELETE CASCADE`
+* `trip_stops.trip_display_id → trips.trip_display_id` with `ON DELETE CASCADE`
+* `route_map_points.trip_display_id → trips.trip_display_id` with `ON DELETE CASCADE`
+* `documents.user_id → profiles.id` with `ON DELETE CASCADE`
+* `tyre_diagnostics.truck_id → trucks.id` with `ON DELETE CASCADE`
+* `truck_maintenance_tickets.truck_id → trucks.id` with `ON DELETE CASCADE`
+* `truck_maintenance_tickets.driver_id → profiles.id` with `ON DELETE RESTRICT`
+* `saved_addresses.user_id → profiles.id` with `ON DELETE CASCADE`
+* `payment_methods.user_id → profiles.id` with `ON DELETE CASCADE`
 
 ---
 

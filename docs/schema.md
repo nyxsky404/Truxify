@@ -1,6 +1,6 @@
 # 📊 Truxify — Database Schema
 
-> **27 tables · 4 RPC functions · 16 foreign keys**
+> **27 tables · 4 RPC functions · 26 foreign keys**
 > Critical business entities now use physical referential integrity for core joins and audit trails.
 
 ---
@@ -310,6 +310,7 @@ erDiagram
 
     trucks ||--o{ tyre_diagnostics : "truck_id"
     trucks ||--o{ truck_maintenance_tickets : "truck_id"
+    profiles ||--o{ truck_maintenance_tickets : "driver_id"
 
     orders ||--o{ order_timeline : "order_display_id"
     orders ||--o| load_offers : "order_display_id"
