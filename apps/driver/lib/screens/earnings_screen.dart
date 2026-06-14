@@ -34,20 +34,27 @@ class _EarningsScreenState extends State<EarningsScreen> {
     _currentMonth = _selectedDate.month;
 
     _loadAllData();
-
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    });
   }
 
   Future<void> _loadAllData() async {
+    setState(() => _isLoading = true);
+    final startTime = DateTime.now();
+
     await Future.wait([
       _loadMonthlyEarnings(),
       _loadSelectedDayTrips(),
       _loadPendingPayments(),
     ]);
+
+    final elapsed = DateTime.now().difference(startTime);
+    final remainingDelay = const Duration(milliseconds: 1500) - elapsed;
+    if (remainingDelay > Duration.zero) {
+      await Future.delayed(remainingDelay);
+    }
+
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _loadMonthlyEarnings() async {
@@ -267,7 +274,7 @@ class _EarningsScreenState extends State<EarningsScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   child: Column(
                     children: [
-                      if (_isMonthLoading) const LinearProgressIndicator(),
+                      if (!_isLoading && _isMonthLoading) const LinearProgressIndicator(),
                       AnimatedSwitcher(
                         duration: const Duration(milliseconds: 300),
                         child: _isLoading

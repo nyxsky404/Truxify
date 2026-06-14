@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
 
 /// A wrapper that applies a consistent, theme-aware shimmer effect.
@@ -450,9 +449,7 @@ class PendingPaymentsShimmer extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Container(
-                    width: 120,
-                    height: 16,
+                  child: Align(
                     alignment: Alignment.centerLeft,
                     child: Container(
                       width: 120,
