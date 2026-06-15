@@ -289,16 +289,6 @@ class _OrdersScreenState extends State<OrdersScreen>
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const SafeArea(
-        child: Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
-        ),
-      );
-    }
-
     return SafeArea(
       child: Column(
         children: [
@@ -335,47 +325,61 @@ class _OrdersScreenState extends State<OrdersScreen>
               children: [
                 RefreshIndicator(
                   onRefresh: _loadOrders,
-                  child: _filteredActiveOrders.isEmpty && !_isLoading
-                      ? const Center(child: Text('No active orders'))
-                      : ListView.separated(
+                  child: _isLoading
+                      ? ListView.separated(
                           padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
-                          itemCount: _filteredActiveOrders.length,
+                          itemCount: 3,
                           separatorBuilder: (_, __) => const SizedBox(height: 14),
-                          itemBuilder: (context, index) {
-                            final order = _filteredActiveOrders[index];
-                            return ActiveOrderCard(
-                              order: order,
-                              onTap: () => Navigator.of(context).push(
-                                AppPageRoute(
-                                  builder: (_) =>
-                                      LiveTrackingScreen(orderId: order.orderId),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+                          itemBuilder: (context, index) => const ShimmerOrderCard(),
+                        )
+                      : _filteredActiveOrders.isEmpty
+                          ? const Center(child: Text('No active orders'))
+                          : ListView.separated(
+                              padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+                              itemCount: _filteredActiveOrders.length,
+                              separatorBuilder: (_, __) => const SizedBox(height: 14),
+                              itemBuilder: (context, index) {
+                                final order = _filteredActiveOrders[index];
+                                return ActiveOrderCard(
+                                  order: order,
+                                  onTap: () => Navigator.of(context).push(
+                                    AppPageRoute(
+                                      builder: (_) =>
+                                          LiveTrackingScreen(orderId: order.orderId),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                 ),
                 RefreshIndicator(
                   onRefresh: _loadOrders,
-                  child: _filteredHistoryOrders.isEmpty && !_isLoading
-                      ? const Center(child: Text('No history orders'))
-                      : ListView.separated(
+                  child: _isLoading
+                      ? ListView.separated(
                           padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
-                          itemCount: _filteredHistoryOrders.length,
+                          itemCount: 3,
                           separatorBuilder: (_, __) => const SizedBox(height: 14),
-                          itemBuilder: (context, index) {
-                            final order = _filteredHistoryOrders[index];
-                            return HistoryOrderCard(
-                              order: order,
-                              onTap: () => Navigator.of(context).push(
-                                AppPageRoute(
-                                  builder: (_) =>
-                                      OrderDetailScreen(order: order),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+                          itemBuilder: (context, index) => const ShimmerOrderCard(),
+                        )
+                      : _filteredHistoryOrders.isEmpty
+                          ? const Center(child: Text('No history orders'))
+                          : ListView.separated(
+                              padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+                              itemCount: _filteredHistoryOrders.length,
+                              separatorBuilder: (_, __) => const SizedBox(height: 14),
+                              itemBuilder: (context, index) {
+                                final order = _filteredHistoryOrders[index];
+                                return HistoryOrderCard(
+                                  order: order,
+                                  onTap: () => Navigator.of(context).push(
+                                    AppPageRoute(
+                                      builder: (_) =>
+                                          OrderDetailScreen(order: order),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                 ),
               ],
             ),
