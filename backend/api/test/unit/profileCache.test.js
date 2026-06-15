@@ -1,8 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 describe('profileCache utility', () => {
   beforeEach(() => {
     vi.resetModules();
+  });
+
+  afterEach(() => {
+    vi.doUnmock('../../src/config/db.js');
   });
 
   describe('getCachedProfile', () => {
@@ -258,6 +262,50 @@ describe('profileCache utility', () => {
       expect(isValidCachedProfile('uid123', badUid)).toBe(false);
       expect(isValidCachedProfile('uid123', badId)).toBe(false);
       expect(isValidCachedProfile('uid123', badRole)).toBe(false);
+    });
+
+    it('returns true for active profile with valid optional fullName and phone', async () => {
+      const { isValidCachedProfile } = await import('../../src/lib/profileCache.js');
+      const validProfile1 = {
+        id: 'user-id-123',
+        uid: 'uid123',
+        role: 'driver',
+        isActive: true,
+        fullName: 'Bob Smith',
+        phone: '+123456789'
+      };
+      const validProfile2 = {
+        id: 'user-id-123',
+        uid: 'uid123',
+        role: 'driver',
+        isActive: true,
+        fullName: null,
+        phone: undefined
+      };
+      expect(isValidCachedProfile('uid123', validProfile1)).toBe(true);
+      expect(isValidCachedProfile('uid123', validProfile2)).toBe(true);
+    });
+
+    it('returns false for active profile with invalid type for fullName or phone', async () => {
+      const { isValidCachedProfile } = await import('../../src/lib/profileCache.js');
+      const badFullName = {
+        id: 'user-id-123',
+        uid: 'uid123',
+        role: 'driver',
+        isActive: true,
+        fullName: 123,
+        phone: '+123456789'
+      };
+      const badPhone = {
+        id: 'user-id-123',
+        uid: 'uid123',
+        role: 'driver',
+        isActive: true,
+        fullName: 'Bob Smith',
+        phone: {}
+      };
+      expect(isValidCachedProfile('uid123', badFullName)).toBe(false);
+      expect(isValidCachedProfile('uid123', badPhone)).toBe(false);
     });
   });
 });

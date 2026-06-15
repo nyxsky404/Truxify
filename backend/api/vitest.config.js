@@ -22,8 +22,8 @@ const getSafeRealPath = (dirPath) => {
 
 export default defineConfig({
   resolve: {
-    // Preserve symlinks so that testing under workspace directories containing special
-    // characters (like '#') can bypass Vite's URL-based resolution limitations by running
+    // Preserve symlinks so that testing under workspace directories containing the '#'
+    // character can bypass Vite's URL-based resolution limitations by running
     // from a safe directory junction or symlink.
     preserveSymlinks:
       (!process.cwd().includes('#') && getSafeRealPath(process.cwd()).includes('#')) ||

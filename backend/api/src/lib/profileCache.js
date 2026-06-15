@@ -57,7 +57,9 @@ export function isValidCachedProfile(firebaseUid, cachedProfile) {
     cachedProfile.isActive === true &&
     cachedProfile.uid === firebaseUid &&
     typeof cachedProfile.id === 'string' &&
-    typeof cachedProfile.role === 'string'
+    typeof cachedProfile.role === 'string' &&
+    (cachedProfile.fullName === undefined || cachedProfile.fullName === null || typeof cachedProfile.fullName === 'string') &&
+    (cachedProfile.phone === undefined || cachedProfile.phone === null || typeof cachedProfile.phone === 'string')
   );
 }
 
