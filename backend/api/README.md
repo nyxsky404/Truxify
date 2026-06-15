@@ -2,6 +2,13 @@
 
 Express service that powers the Truxify customer and driver apps. It integrates with Supabase, Redis, MongoDB, Firebase Auth, and supporting services.
 
+## What It Does
+
+- exposes REST endpoints for bookings, drivers, support, and tracking
+- handles authentication and authorization
+- coordinates delivery verification and escrow-related flows
+- powers WebSocket updates for live tracking
+
 ## Develop
 
 ```bash
@@ -33,6 +40,8 @@ Commonly required values for local development:
 - `DRIVER_LOGIN_PHONE`
 - `DRIVER_LOGIN_OTP`
 
+Refer to `.env.example` for the full set of available configuration values.
+
 ## Test
 
 ```bash
@@ -44,4 +53,5 @@ npm run test:integration
 ## Notes
 
 - The test suite uses an in-memory Supabase mock and does not require live services.
+- The backend can be run independently for API development and testing.
 - See `docs/wiki/Getting-Started-&-Local-Setup.md` for the full local setup guide.
