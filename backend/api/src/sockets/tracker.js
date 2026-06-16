@@ -16,6 +16,7 @@ const BUFFER_WARN_THRESHOLD = 0.5;
 const BUFFER_CRIT_THRESHOLD = 0.8;
 const BUFFER_MONITOR_INTERVAL_MS = 30000;
 let telemetryWriteBuffer = [];
+let currentFlushPromise = null;
 const BUFFER_FLUSH_INTERVAL_MS = 20000;
 let flushBackoffMs = 1000;
 let isSchedulerActive = false;
@@ -436,6 +437,10 @@ export async function handleLocationPing(ws, data) {
  * Periodically dumps the aggregated batch matrix logs into MongoDB Atlas
  */
 async function flushTelemetryBuffer() {
+  if (currentFlushPromise) {
+    return currentFlushPromise;
+  }
+
   if (telemetryWriteBuffer.length === 0) {
     flushBackoffMs = 1000;
     return;
@@ -446,35 +451,41 @@ async function flushTelemetryBuffer() {
     return;
   }
 
-  const recordsToFlush = [...telemetryWriteBuffer];
-  telemetryWriteBuffer = [];
+  currentFlushPromise = (async () => {
+    const recordsToFlush = [...telemetryWriteBuffer];
+    telemetryWriteBuffer = [];
 
-  console.log(`[TRUXIFY BATCH CONTROL] Committing bulk cluster of ${recordsToFlush.length} spatial rows to MongoDB...`);
+    console.log(`[TRUXIFY BATCH CONTROL] Committing bulk cluster of ${recordsToFlush.length} spatial rows to MongoDB...`);
 
-  try {
-    const collection = getMongoDb().collection('live_gps_pings');
-    await collection.insertMany(recordsToFlush, { ordered: false });
-    console.log(`[TRUXIFY DB SUCCESS] Successfully flushed ${recordsToFlush.length} records to MongoDB clusters.`);
-    flushBackoffMs = 1000;
-  } catch (err) {
-    console.error(`[TRUXIFY RETRY LOGIC] Bulk insert failed (backoff: ${flushBackoffMs}ms):`, err.message);
+    try {
+      const collection = getMongoDb().collection('live_gps_pings');
+      await collection.insertMany(recordsToFlush, { ordered: false });
+      console.log(`[TRUXIFY DB SUCCESS] Successfully flushed ${recordsToFlush.length} records to MongoDB clusters.`);
+      flushBackoffMs = 1000;
+    } catch (err) {
+      console.error(`[TRUXIFY RETRY LOGIC] Bulk insert failed (backoff: ${flushBackoffMs}ms):`, err.message);
 
-    const isValidationError = err.code === 121 || err.message.includes('Document failed validation');
+      const isValidationError = err.code === 121 || err.message.includes('Document failed validation');
 
-    if (isValidationError) {
-      console.error(`[TRUXIFY FATAL DATA DROP] Discarding malformed tracking block payloads to prevent infinite loop memory bloat.`);
-    } else {
-      flushBackoffMs = Math.min(flushBackoffMs * 2, 60000);
+      if (isValidationError) {
+        console.error(`[TRUXIFY FATAL DATA DROP] Discarding malformed tracking block payloads to prevent infinite loop memory bloat.`);
+      } else {
+        flushBackoffMs = Math.min(flushBackoffMs * 2, 60000);
 
-      const spaceAvailable = Math.max(0, MAX_BUFFER_SIZE - telemetryWriteBuffer.length);
-      const recordsToKeep = recordsToFlush.slice(-spaceAvailable);
-      const droppedCount = recordsToFlush.length - recordsToKeep.length;
-      if (droppedCount > 0) {
-        console.warn(`[TRUXIFY BUFFER DROP] Buffer full: dropped ${droppedCount} oldest records from retry batch.`);
+        const spaceAvailable = Math.max(0, MAX_BUFFER_SIZE - telemetryWriteBuffer.length);
+        const recordsToKeep = recordsToFlush.slice(-spaceAvailable);
+        const droppedCount = recordsToFlush.length - recordsToKeep.length;
+        if (droppedCount > 0) {
+          console.warn(`[TRUXIFY BUFFER DROP] Buffer full: dropped ${droppedCount} oldest records from retry batch.`);
+        }
+        telemetryWriteBuffer = [...recordsToKeep, ...telemetryWriteBuffer];
       }
-      telemetryWriteBuffer = [...recordsToKeep, ...telemetryWriteBuffer];
+    } finally {
+      currentFlushPromise = null;
     }
-  }
+  })();
+
+  return currentFlushPromise;
 }
 
 function monitorBufferSize() {
@@ -531,7 +542,8 @@ export async function closeWebSocketServer() {
   }
 
   // Wait for MongoDB to be available before final flush
-  const mongoMaxWaitMs = parseInt(process.env.MONGODB_SHUTDOWN_WAIT_MS || '10000', 10);
+  const parsedWait = parseInt(process.env.MONGODB_SHUTDOWN_WAIT_MS, 10);
+  const mongoMaxWaitMs = isNaN(parsedWait) ? 10000 : parsedWait;
   if (mongoMaxWaitMs > 0) {
     const mongoPollIntervalMs = Math.min(500, mongoMaxWaitMs);
     const mongoWaitStart = Date.now();
@@ -541,6 +553,15 @@ export async function closeWebSocketServer() {
     if (!getMongoDb()) {
       const dataLoss = telemetryWriteBuffer.length;
       console.warn(`[TRUXIFY SHUTDOWN] MongoDB not available after waiting. ${dataLoss} telemetry records will be lost.`);
+    }
+  }
+
+  // Wait for any in-flight flush to complete
+  if (currentFlushPromise) {
+    try {
+      await currentFlushPromise;
+    } catch (err) {
+      // Ignore errors; final flush retry will handle them
     }
   }
 
