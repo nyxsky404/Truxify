@@ -148,8 +148,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return minutes == 1 ? '1 min ago' : '$minutes mins ago';
   }
 
-  void _logout(BuildContext context) {
-    FcmService.clearToken();
+  void _logout(BuildContext context) async {
+    try {
+      await _profileService.logout();
+    } catch (e) {
+      debugPrint('Logout error: $e');
+    }
+
+    if (!context.mounted) return;
+
+    await _cacheManager.open();
+    await _cacheManager.cacheProfile({});
+
     Navigator.of(context).pushAndRemoveUntil(
       AppPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
