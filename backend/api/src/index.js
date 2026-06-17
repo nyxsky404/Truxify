@@ -19,6 +19,7 @@ import profileRoutes from './routes/profileRoutes.js';
 import loadRoutes from './routes/loadRoutes.js';
 import truckRoutes from './routes/truckRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import healthRoutes from './routes/healthRoutes.js';
 
 import logger from './middleware/logger.js';
 import { requestIdMiddleware, requestLogger } from './middleware/requestId.js';
@@ -172,18 +173,7 @@ app.use('/api/v1/trips', tripRoutes);
 // ============================================================================
 // REST API ROUTING
 // ============================================================================
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date(),
-    service: 'Truxify API',
-    uptime: process.uptime(),
-    env: {
-      bypass_auth: process.env.BYPASS_AUTH === 'true',
-      node_version: process.version
-    }
-  });
-});
+app.use('/api/health', healthRoutes);
 
 app.use('/api/orders', orderRoutes);
 app.use('/api/driver', driverRoutes);
