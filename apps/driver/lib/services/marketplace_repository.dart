@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -160,6 +161,21 @@ class MarketplaceRepository {
       spaceAvailable: s('space_available', '—'),
       updatedTotalEarnings: s('updated_total_earnings', '—'),
     );
+  }
+
+  /// Subscribes to new available load offers via Supabase Realtime.
+  /// Returns a stream of [LoadOffer] objects as they are inserted.
+  /// Callers should cancel the [StreamSubscription] when done.
+  Stream<LoadOffer> subscribeToNewLoads() {
+    return _client
+        .from('load_offers')
+        .stream(primaryKey: ['id'])
+        .eq('status', 'available')
+        .map((rows) => rows
+            .cast<Map<String, dynamic>>()
+            .map(_mapLoadOffer)
+            .toList())
+        .expand((offers) => offers);
   }
 
   String _formatCurrency(num value) {

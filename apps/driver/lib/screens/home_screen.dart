@@ -1,5 +1,6 @@
 // ignore_for_file: unused_element, unused_field
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:geolocator/geolocator.dart';
@@ -14,6 +15,7 @@ import 'package:truxify_driver/widgets/slide_to_confirm_button.dart';
 import '../core/app_routes.dart';
 import '../data/mock_data.dart';
 import '../services/geocode_service.dart';
+import '../services/marketplace_repository.dart';
 import '../services/route_service.dart';
 import '../services/trip_service.dart';
 import '../theme/app_theme.dart';
@@ -52,18 +54,35 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingLocation = true;
   String? _locationError;
 
+  final MarketplaceRepository _marketplaceRepo = MarketplaceRepository();
+  StreamSubscription<LoadOffer>? _loadSubscription;
+  LoadOffer? _latestNewLoad;
+  bool _dismissedNewLoad = false;
+
   @override
   void initState() {
     super.initState();
     _initLocation();
+    _subscribeToNewLoads();
   }
 
   @override
   void dispose() {
+    _loadSubscription?.cancel();
     _mapController.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  void _subscribeToNewLoads() {
+    _loadSubscription = _marketplaceRepo.subscribeToNewLoads().listen((load) {
+      if (!mounted) return;
+      setState(() {
+        _latestNewLoad = load;
+        _dismissedNewLoad = false;
+      });
+    });
   }
 
   /// Called once on startup — fetches GPS and resolves address.
@@ -471,6 +490,78 @@ class _HomeScreenState extends State<HomeScreen> {
                     : _buildSearchCard(context),
               ),
             ),
+
+            // New Load Notification Banner
+            if (_latestNewLoad != null && !_dismissedNewLoad)
+              Positioned(
+                left: 12,
+                right: 12,
+                top: 96,
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() => _dismissedNewLoad = true);
+                    Navigator.of(context).pushNamed(
+                      AppRoutes.loadDetail,
+                      arguments: _latestNewLoad,
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: TruxifyColors.accent,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: TruxifyColors.accent.withOpacity(0.25),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.local_shipping_rounded,
+                            color: Colors.white, size: 18),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'New Load Available!',
+                                style: GoogleFonts.dmSans(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _latestNewLoad!.route,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.dmSans(
+                                  fontSize: 11,
+                                  color: Colors.white.withOpacity(0.85),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() => _dismissedNewLoad = true);
+                          },
+                          child: Icon(Icons.close_rounded,
+                              color: Colors.white.withOpacity(0.7), size: 20),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
 
             // Recenter FAB — hidden until GPS is ready
             if (_currentLocation != null)
