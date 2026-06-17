@@ -18,6 +18,7 @@ import supportRoutes from './routes/supportRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
 import loadRoutes from './routes/loadRoutes.js';
 import truckRoutes from './routes/truckRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 
 // Configuration load from root folder is handled in db.js
 
@@ -197,6 +198,7 @@ app.use('/api/support', supportRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/devices', deviceRoutes);
 app.use('/api/trucks', truckRoutes);
+app.use('/api/auth', authRoutes);
 // Root route
 app.get('/', (req, res) => {
   res.send('<h1>Truxify Backend API is running.</h1><p>Use WebSockets at <code>ws://localhost:5000/ws/tracking</code></p>');
