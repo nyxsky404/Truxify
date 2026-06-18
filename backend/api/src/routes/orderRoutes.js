@@ -674,8 +674,12 @@ router.post('/:id/bids/:bidId/accept', authenticate, requireRole(['customer']), 
         logger.warn('[escrow] ESCROW_MATIC_PER_PAISA not configured — skipping escrow deposit.');
       } else {
         const maticAmount = (bid.bid_amount * maticPerPaisa).toFixed(18);
-        const maxEscrowMatic = parseFloat(process.env.MAX_ESCROW_MATIC || '5');
-        if (parseFloat(maticAmount) > maxEscrowMatic) {
+        const maxEscrowMatic = Number.parseFloat(process.env.MAX_ESCROW_MATIC || '5');
+        if (!Number.isFinite(maxEscrowMatic) || maxEscrowMatic <= 0) {
+          logger.error('[escrow] MAX_ESCROW_MATIC is invalid — refusing deposit.');
+          return res.status(500).json({ error: 'Escrow configuration error. Please contact support.' });
+        }
+        if (Number.parseFloat(maticAmount) > maxEscrowMatic) {
           return res.status(400).json({ error: 'Computed escrow amount exceeds safety cap. Check ESCROW_MATIC_PER_PAISA configuration.' });
         }
         const amountWei = ethers.parseEther(maticAmount);
