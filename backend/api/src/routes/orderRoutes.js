@@ -112,6 +112,16 @@ const verifyDeliveryLimiter = rateLimit({
   message: { error: 'Too many delivery verification attempts. Please try again later.' },
 });
 
+// Rate limiter for updating order milestones
+const milestoneLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: process.env.NODE_ENV === 'test' ? 1000 : 5,
+  keyGenerator: (req) => req.user.id,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many milestone updates. Please slow down.' },
+});
+
 // Rate limiter for the predict-demand endpoint
 const predictDemandLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -738,7 +748,7 @@ router.post('/:id/bids/:bidId/accept', authenticate, requireRole(['customer']), 
 // ============================================================================
 // 12. UPDATE ORDER MILESTONE (ASSIGNED DRIVER)
 // ============================================================================
-router.put('/:id/milestones', authenticate, requireRole(['driver']), validateParams(paramIdSchema), validateBody(updateMilestoneSchema), async (req, res) => {
+router.put('/:id/milestones', authenticate, requireRole(['driver']), milestoneLimiter, validateParams(paramIdSchema), validateBody(updateMilestoneSchema), async (req, res) => {
   const orderId = req.params.id;
   const { milestone } = req.body;
 
@@ -770,6 +780,8 @@ router.put('/:id/milestones', authenticate, requireRole(['driver']), validatePar
         if (stored) {
           await clearOtpState(orderId);
         }
+      } else {
+        logger.warn(`[OTP] Driver ${req.user.id} attempted OTP regeneration for order ${orderId}`);
       }
     }
 
@@ -819,7 +831,8 @@ router.post('/:id/verify-delivery', authenticate, requireRole(['driver']), verif
       });
     }
 
-    if (otpRecord.otp !== String(otp)) {
+    const submittedHash = crypto.createHash('sha256').update(String(otp)).digest('hex');
+    if (otpRecord.otp_hash !== submittedHash) {
       const count = await recordOtpFailure(orderId);
       const remaining = Math.max(0, OTP_MAX_FAILED_ATTEMPTS - count);
       const message = remaining > 0
