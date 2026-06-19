@@ -15,6 +15,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
+import crypto from 'crypto';
 
 const routeEstimateMock = vi.fn();
 
@@ -1000,14 +1001,16 @@ describe('Delivery OTP Verification and Milestones', () => {
 
     const otpRecord = m.store.delivery_otps.find(o => o.order_id === 'order-1');
     expect(otpRecord).toBeTruthy();
-    expect(otpRecord.otp).toMatch(/^\d{6}$/); // 6-digit OTP
+    expect(otpRecord.otp_hash).toMatch(/^[a-f0-9]{64}$/); // SHA-256 hash
     expect(otpRecord.verified).toBe(false);
     expect(otpRecord.expires_at).toBeDefined();
 
     // Verify customer notification was created
     const notification = m.store.notifications.find(n => n.user_id === 'customer-456');
     expect(notification).toBeTruthy();
-    expect(notification.body).toContain(otpRecord.otp);
+    const otpInNotification = notification.body.match(/\b\d{6}\b/)[0];
+    const expectedHash = crypto.createHash('sha256').update(otpInNotification).digest('hex');
+    expect(otpRecord.otp_hash).toBe(expectedHash);
     expect(notification.notif_type).toBe('order_update');
   });
 
@@ -1056,7 +1059,7 @@ describe('Delivery OTP Verification and Milestones', () => {
     m.store.delivery_otps = [{
       id: 'otp-1',
       order_id: 'order-1',
-      otp: '123456',
+      otp_hash: crypto.createHash('sha256').update('123456').digest('hex'),
       expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
       verified: false,
       created_at: new Date().toISOString()
@@ -1085,7 +1088,7 @@ describe('Delivery OTP Verification and Milestones', () => {
     m.store.delivery_otps = [{
       id: 'otp-1',
       order_id: 'order-1',
-      otp: '123456',
+      otp_hash: crypto.createHash('sha256').update('123456').digest('hex'),
       expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
       verified: false,
       created_at: new Date().toISOString()
@@ -1133,7 +1136,7 @@ describe('Delivery OTP Verification and Milestones', () => {
     m.store.delivery_otps = [{
       id: 'otp-expired',
       order_id: 'order-expired',
-      otp: '123456',
+      otp_hash: crypto.createHash('sha256').update('123456').digest('hex'),
       expires_at: new Date(Date.now() - 1 * 60 * 1000).toISOString(), // expired 1 minute ago
       verified: false,
       created_at: new Date(Date.now() - 20 * 60 * 1000).toISOString()
@@ -1163,7 +1166,7 @@ describe('Delivery OTP Verification and Milestones', () => {
     m.store.delivery_otps = [{
       id: 'otp-lockout',
       order_id: orderId,
-      otp: '123456',
+      otp_hash: crypto.createHash('sha256').update('123456').digest('hex'),
       expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
       verified: false,
       created_at: new Date().toISOString()
@@ -1240,7 +1243,7 @@ describe('Delivery OTP Verification and Milestones', () => {
     m.store.delivery_otps = [{
       id: 'otp-clear-state',
       order_id: orderId,
-      otp: '123456',
+      otp_hash: crypto.createHash('sha256').update('123456').digest('hex'),
       expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
       verified: false,
       created_at: new Date().toISOString()
@@ -1300,7 +1303,7 @@ describe('Delivery OTP Verification and Milestones', () => {
     m.store.delivery_otps = [{
       id: 'otp-regen-old',
       order_id: orderId,
-      otp: '123456',
+      otp_hash: crypto.createHash('sha256').update('123456').digest('hex'),
       expires_at: new Date(Date.now() - 1 * 60 * 1000).toISOString(), // expired
       verified: false,
       created_at: new Date(Date.now() - 20 * 60 * 1000).toISOString()
@@ -1330,17 +1333,20 @@ describe('Delivery OTP Verification and Milestones', () => {
     expect(oldOtp).toBeTruthy();
 
     // A new OTP should have been created
-    const newOtps = m.store.delivery_otps.filter(o => o.order_id === orderId && o.otp !== '123456');
+    const expectedOldHash = crypto.createHash('sha256').update('123456').digest('hex');
+    const newOtps = m.store.delivery_otps.filter(o => o.order_id === orderId && o.otp_hash !== expectedOldHash);
     expect(newOtps.length).toBeGreaterThan(0);
     const newOtp = newOtps[0];
-    expect(newOtp.otp).toMatch(/^\d{6}$/);
+    expect(newOtp.otp_hash).toMatch(/^[a-f0-9]{64}$/);
     expect(newOtp.verified).toBe(false);
     expect(newOtp.expires_at).toBeDefined();
 
     // Verify customer notification was created with the new OTP
     const notification = m.store.notifications.find(n => n.user_id === 'customer-456');
     expect(notification).toBeTruthy();
-    expect(notification.body).toContain(newOtp.otp);
+    const otpInNotification = notification.body.match(/\b\d{6}\b/)[0];
+    const expectedNewHash = crypto.createHash('sha256').update(otpInNotification).digest('hex');
+    expect(newOtp.otp_hash).toBe(expectedNewHash);
   });
 
   describe('Redis-based rate limiting & error fallback resilience', () => {
@@ -1405,7 +1411,7 @@ describe('Delivery OTP Verification and Milestones', () => {
       m.store.delivery_otps = [{
         id: 'otp-redis-active',
         order_id: 'order-redis-active',
-        otp: '123456',
+        otp_hash: crypto.createHash('sha256').update('123456').digest('hex'),
         expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
         verified: false,
         created_at: new Date().toISOString()
@@ -1465,7 +1471,7 @@ describe('Delivery OTP Verification and Milestones', () => {
       m.store.delivery_otps = [{
         id: 'otp-redis-failing',
         order_id: 'order-redis-failing',
-        otp: '123456',
+        otp_hash: crypto.createHash('sha256').update('123456').digest('hex'),
         expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
         verified: false,
         created_at: new Date().toISOString()

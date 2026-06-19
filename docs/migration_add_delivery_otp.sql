@@ -5,7 +5,7 @@
 CREATE TABLE IF NOT EXISTS delivery_otps (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_id      UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-  otp           TEXT NOT NULL,
+  otp_hash      TEXT NOT NULL,
   expires_at    TIMESTAMPTZ NOT NULL,
   verified      BOOLEAN NOT NULL DEFAULT false,
   verified_at   TIMESTAMPTZ,
@@ -29,14 +29,10 @@ CREATE POLICY customer_select_delivery_otp ON delivery_otps
     )
   );
 
--- Drivers can read delivery OTPs only for orders they are assigned to
-CREATE POLICY driver_select_delivery_otp ON delivery_otps
+-- Drivers cannot select delivery OTPs at all
+CREATE POLICY no_driver_select_delivery_otp ON delivery_otps
   FOR SELECT
-  USING (
-    order_id IN (
-      SELECT id FROM orders WHERE driver_id = auth.uid()
-    )
-  );
+  USING (false);
 
 -- Only the service role (backend) can insert / update delivery OTPs
 CREATE POLICY service_insert_delivery_otp ON delivery_otps

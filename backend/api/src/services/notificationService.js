@@ -1,5 +1,6 @@
 import { supabase, firebaseAdmin } from '../config/db.js';
 import logger from '../middleware/logger.js';
+import crypto from 'crypto';
 
 /**
  * Fetch a user's FCM token from the profiles table.
@@ -99,12 +100,13 @@ export async function sendFcmNotification(userId, notification, data = {}) {
  */
 export async function storeDeliveryOtp(orderId, otp, ttlMinutes = 15) {
   const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000).toISOString();
+  const otpHash = crypto.createHash('sha256').update(String(otp)).digest('hex');
 
   const { data, error } = await supabase
     .from('delivery_otps')
     .insert({
       order_id: orderId,
-      otp,
+      otp_hash: otpHash,
       expires_at: expiresAt,
       verified: false,
     })
@@ -124,12 +126,12 @@ export async function storeDeliveryOtp(orderId, otp, ttlMinutes = 15) {
  * Retrieve the latest active (unexpired, unverified) OTP for an order.
  *
  * @param {string} orderId
- * @returns {Promise<{id: string, otp: string, expires_at: string} | null>}
+ * @returns {Promise<{id: string, otp_hash: string, expires_at: string} | null>}
  */
 export async function getActiveDeliveryOtp(orderId) {
   const { data, error } = await supabase
     .from('delivery_otps')
-    .select('id, otp, expires_at')
+    .select('id, otp_hash, expires_at')
     .eq('order_id', orderId)
     .eq('verified', false)
     .gte('expires_at', new Date().toISOString())
