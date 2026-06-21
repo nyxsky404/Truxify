@@ -35,12 +35,10 @@ class ProfileService {
   }
 
   Future<void> logout() async {
-    final client = SupabaseService.client;
-    final token = client.auth.currentSession?.accessToken;
-    final userId = client.auth.currentUser?.id;
+    final userId = SupabaseService.client.auth.currentUser?.id;
 
-    if (token == null || token.isEmpty || userId == null) {
-      await client.auth.signOut();
+    if (userId == null) {
+      await SupabaseService.client.auth.signOut();
       return;
     }
 
@@ -53,10 +51,9 @@ class ProfileService {
         },
       );
     } catch (e) {
-      // Log error but proceed to sign out locally
       print('Backend logout failed: $e');
     } finally {
-      await client.auth.signOut();
+      await SupabaseService.client.auth.signOut();
     }
   }
 }
