@@ -96,7 +96,7 @@ describe('Device Routes Integration Tests', () => {
       const res = await request(buildApp())
         .post('/api/devices/register')
         .set(CUSTOMER_HEADERS)
-        .send({ fcmToken: 'token123', platform: 'smart-fridge' });
+        .send({ fcmToken: 'token1234567890', platform: 'smart-fridge' });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toBe('Validation failed');
