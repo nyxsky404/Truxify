@@ -1102,7 +1102,7 @@ router.post('/:id/confirm-deposit', authenticate, requireRole(['customer']), val
 
     res.json({ message: 'Escrow deposit confirmed', txHash: result.txHash });
   } catch (err) {
-    console.error('[confirm-deposit] Exception:', err.message);
+    logger.error('[confirm-deposit] Exception:', err.message);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
