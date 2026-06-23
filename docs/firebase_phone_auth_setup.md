@@ -41,7 +41,7 @@ You need to register **two** Android apps in your Firebase project:
 3. Download the `google-services.json` file
 4. Place it in the correct directory:
 
-```
+```text
 apps/customer/android/app/google-services.json   # Customer app
 apps/driver/android/app/google-services.json      # Driver app
 ```
@@ -128,7 +128,7 @@ cd apps/driver && flutter run
 
 ## 7. Authentication Flow
 
-```
+```text
 User enters phone number (+91 XXXXXXXXXX)
         ↓
 Firebase sends SMS with 6-digit code

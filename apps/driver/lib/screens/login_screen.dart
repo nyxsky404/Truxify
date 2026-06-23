@@ -46,46 +46,54 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _loading = true);
 
-    await _authService.verifyPhoneNumber(
-      phoneNumber: '+91$phone',
-      forceResendingToken: _resendToken,
-      onCodeSent: (verificationId, resendToken) {
-        if (!mounted) return;
-        setState(() {
-          _loading = false;
-          _verificationId = verificationId;
-          _resendToken = resendToken;
-        });
-        Navigator.of(context).pushNamed(
-          AppRoutes.otp,
-          arguments: <String, String>{
-            'phone': phone,
-            'verificationId': verificationId,
-          },
-        );
-      },
-      onVerificationFailed: (FirebaseAuthException e) {
-        if (!mounted) return;
-        setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message ?? 'Verification failed')),
-        );
-      },
-      onAutoVerification: (PhoneAuthCredential credential) async {
-        if (!mounted) return;
-        try {
-          await FirebaseAuth.instance.signInWithCredential(credential);
+    try {
+      await _authService.verifyPhoneNumber(
+        phoneNumber: '+91$phone',
+        forceResendingToken: _resendToken,
+        onCodeSent: (verificationId, resendToken) {
           if (!mounted) return;
-          Navigator.of(context).pushReplacementNamed(AppRoutes.shell);
-        } catch (e) {
+          setState(() {
+            _loading = false;
+            _verificationId = verificationId;
+            _resendToken = resendToken;
+          });
+          Navigator.of(context).pushNamed(
+            AppRoutes.otp,
+            arguments: <String, String>{
+              'phone': phone,
+              'verificationId': verificationId,
+            },
+          );
+        },
+        onVerificationFailed: (FirebaseAuthException e) {
           if (!mounted) return;
           setState(() => _loading = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Auto-verification failed: $e')),
+            SnackBar(content: Text(e.message ?? 'Verification failed')),
           );
-        }
-      },
-    );
+        },
+        onAutoVerification: (PhoneAuthCredential credential) async {
+          if (!mounted) return;
+          try {
+            await FirebaseAuth.instance.signInWithCredential(credential);
+            if (!mounted) return;
+            Navigator.of(context).pushReplacementNamed(AppRoutes.shell);
+          } catch (e) {
+            if (!mounted) return;
+            setState(() => _loading = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Auto-verification failed: $e')),
+            );
+          }
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Verification failed: $e')),
+      );
+    }
   }
 
   @override

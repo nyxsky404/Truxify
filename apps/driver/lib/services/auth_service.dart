@@ -1,10 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Centralized Firebase Phone Authentication service for the Driver app.
 class AuthService {
-  AuthService({FirebaseAuth? auth}) : _auth = auth ?? FirebaseAuth.instance;
+  AuthService({FirebaseAuth? auth, SupabaseClient? supabase})
+      : _auth = auth ?? FirebaseAuth.instance,
+        _supabase = supabase ?? Supabase.instance.client;
 
   final FirebaseAuth _auth;
+  final SupabaseClient _supabase;
 
   /// Current authenticated user.
   User? get currentUser => _auth.currentUser;
@@ -49,5 +53,10 @@ class AuthService {
   /// Sign out.
   Future<void> signOut() async {
     await _auth.signOut();
+    try {
+      await _supabase.auth.signOut();
+    } catch (_) {
+      // Ignore if Supabase is not initialized or configured
+    }
   }
 }

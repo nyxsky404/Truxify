@@ -80,6 +80,7 @@ class ApiClient {
       _cachedFirebaseToken = await firebaseUser.getIdToken();
       return _cachedFirebaseToken;
     }
+    _cachedFirebaseToken = null;
     return _supabase.auth.currentSession?.accessToken;
   }
 

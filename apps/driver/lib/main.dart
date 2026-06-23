@@ -27,6 +27,7 @@ Future<void> main() async {
     }
   } catch (e) {
     debugPrint('Firebase initialization failed: $e');
+    rethrow;
   }
 
   // Initialize Supabase if keys are provided.
