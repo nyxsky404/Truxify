@@ -1035,7 +1035,7 @@ describe('Delivery OTP Verification and Milestones', () => {
       .send({}); // Missing OTP
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe('OTP is required for verification.');
+    expect(res.body.error).toBe('Validation failed');
   });
 
   it('fails OTP verification if driver is not assigned', async () => {
