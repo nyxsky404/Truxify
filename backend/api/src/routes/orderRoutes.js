@@ -881,10 +881,6 @@ router.post('/:id/verify-delivery', authenticate, userLimiter, requireRole(['dri
       return res.status(400).json({ error: message });
     }
 
-    // Successful verification — clear failure state
-    await clearOtpState(orderId);
-    await verifyDeliveryOtp(orderId);
-
     const { data: preUpdatedOrder, error: updateErr } = await supabase.from('orders').update({
       updated_at: new Date().toISOString()
     })
@@ -908,7 +904,9 @@ router.post('/:id/verify-delivery', authenticate, userLimiter, requireRole(['dri
       return res.status(500).json({ error: 'Failed to complete trip and release payment.', details: rpcErr.message });
     }
 
-
+    // OTP is only consumed after the RPC succeeds — if the RPC fails the driver can retry
+    await verifyDeliveryOtp(orderId);
+    await clearOtpState(orderId);
     // Escrow: release funds to driver after successful delivery verification
     if (order.escrow_status === 'funded') {
       try {
