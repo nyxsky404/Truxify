@@ -1,11 +1,14 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_core_platform_interface/test.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> setupTests() async {
   TestWidgetsFlutterBinding.ensureInitialized();
   setupFirebaseCoreMocks();
+
+  SharedPreferences.setMockInitialValues({});
 
   if (Firebase.apps.isEmpty) {
     try {
