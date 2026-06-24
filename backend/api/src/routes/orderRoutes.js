@@ -954,7 +954,43 @@ router.post('/:id/verify-delivery', authenticate, userLimiter, requireRole(['dri
 });
 
 // ============================================================================
-// 14. CHANGE DROP (CUSTOMER)
+// 14. RESEND DELIVERY OTP (DRIVER)
+// ============================================================================
+router.post('/:id/resend-otp', authenticate, userLimiter, requireRole(['driver']), validateParams(paramIdSchema), async (req, res) => {
+  const orderId = req.params.id;
+
+  try {
+    const { data: order, error: orderErr } = await supabase.from('orders').select('id, order_display_id, driver_id, customer_id, status').eq('id', orderId).maybeSingle();
+    if (orderErr || !order) return res.status(404).json({ error: 'Order not found.' });
+    if (order.driver_id !== req.user.id) return res.status(403).json({ error: 'Access Denied: You are not assigned to this order.' });
+
+    const terminalStatuses = ['delivered', 'cancelled', 'payment_released'];
+    if (terminalStatuses.includes(order.status)) {
+      return res.status(400).json({ error: 'Cannot resend OTP for a completed or cancelled order.' });
+    }
+
+    const otp = crypto.randomInt(100000, 1000000).toString();
+    const stored = await storeDeliveryOtp(orderId, otp, OTP_TTL_MINUTES);
+    if (!stored) {
+      return res.status(500).json({ error: 'Failed to generate delivery OTP.' });
+    }
+
+    await clearOtpState(orderId);
+
+    const notifResult = await sendDeliveryOtpNotification(order.customer_id, order.order_display_id, otp);
+    if (!notifResult.success) {
+      logger.warn(`[OrderRoutes] Resend OTP notification failed for order ${order.order_display_id} — FCM error: ${notifResult.fcm?.error || 'unknown'}`);
+    }
+
+    res.json({ message: 'New delivery OTP sent.', expiresInMinutes: OTP_TTL_MINUTES });
+  } catch (err) {
+    logger.error('[OrderRoutes] Resend OTP error:', err.message);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// ============================================================================
+// 15. CHANGE DROP (CUSTOMER)
 // ============================================================================
 router.put('/:id/change-drop', authenticate, userLimiter, requireRole(['customer']), validateParams(paramIdSchema), validateBody(changeDropSchema), async (req, res) => {
   const orderId = req.params.id; // this is order_display_id from client
@@ -1053,7 +1089,7 @@ router.put('/:id/change-drop', authenticate, userLimiter, requireRole(['customer
 });
 
 // ============================================================================
-// 15. CANCEL ORDER AND REFUND ESCROW (CUSTOMER)
+// 16. CANCEL ORDER AND REFUND ESCROW (CUSTOMER)
 // ============================================================================
 router.post('/:id/cancel', authenticate, userLimiter, requireRole(['customer']), validateParams(paramIdSchema), validateBody(cancelOrderSchema), async (req, res) => {
   const orderId = req.params.id; // this is order_display_id from client
@@ -1142,7 +1178,7 @@ router.post('/:id/cancel', authenticate, userLimiter, requireRole(['customer']),
 });
 
 // ============================================================================
-// 16. CONFIRM ESCROW DEPOSIT (CUSTOMER)
+// 17. CONFIRM ESCROW DEPOSIT (CUSTOMER)
 // ============================================================================
 router.post('/:id/confirm-deposit', authenticate, userLimiter, requireRole(['customer']), validateParams(paramIdSchema), validateBody(
   z.object({ txHash: z.string().regex(/^0x([A-Fa-f0-9]{64})$/, 'Invalid transaction hash') }),
@@ -1181,7 +1217,7 @@ router.post('/:id/confirm-deposit', authenticate, userLimiter, requireRole(['cus
 });
 
 // ============================================================================
-// 17. PREDICT RIDE DEMAND (CUSTOMER OR DRIVER)
+// 18. PREDICT RIDE DEMAND (CUSTOMER OR DRIVER)
 // ============================================================================
 router.post('/predict-demand', authenticate, userLimiter, requireRole(['customer', 'driver']), predictDemandLimiter, validateBody(predictDemandSchema), async (req, res) => {
   try {
