@@ -709,7 +709,7 @@ router.post('/:id/bids/:bidId/accept', authenticate, userLimiter, requireRole(['
           return res.status(400).json({ error: 'Computed escrow amount exceeds safety cap. Check ESCROW_MATIC_PER_PAISA configuration.' });
         }
         const amountWei = ethers.parseEther(maticAmount);
-        const { txData } = await buildDepositTx(
+        const { txData, bookingId } = await buildDepositTx(
           order.order_display_id, customerWallet, driverWallet, amountWei,
         );
         if (txData) {
@@ -731,7 +731,7 @@ router.post('/:id/bids/:bidId/accept', authenticate, userLimiter, requireRole(['
             depositTxData = txData;
           }
           await supabase.from('orders').update({
-            escrow_booking_id: `escrow:${order.order_display_id}`,
+            escrow_booking_id: bookingId,
             escrow_status: 'funding',
           }).eq('id', orderId);
         }
@@ -1197,7 +1197,7 @@ router.post('/:id/confirm-deposit', authenticate, userLimiter, requireRole(['cus
       return res.status(400).json({ error: 'Order is not in funding state' });
     }
 
-    const bookingId = `escrow:${order.order_display_id}`;
+    const bookingId = order.escrow_booking_id || `escrow:${order.order_display_id}`;
     const result = await recordDepositTx(bookingId, txHash);
 
     if (result.error) return res.status(422).json({ error: result.error });
