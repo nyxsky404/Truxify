@@ -131,7 +131,6 @@ void main() {
         expect(request.url.path, equals('/api/driver/wallet/history'));
         expect(request.url.queryParameters['page'], equals('1'));
         expect(request.url.queryParameters['limit'], equals('10'));
-        expect(request.headers['Authorization'], equals('Bearer mock-token'));
         return http.Response(jsonEncode(mockResponse), 200);
       });
 

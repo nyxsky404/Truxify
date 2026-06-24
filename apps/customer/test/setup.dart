@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_core_platform_interface/test.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> setupTests() async {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -17,5 +18,14 @@ Future<void> setupTests() async {
         ),
       );
     } on FirebaseException catch (_) {}
+  }
+
+  try {
+    Supabase.instance;
+  } on AssertionError {
+    await Supabase.initialize(
+      url: 'http://localhost:54321',
+      anonKey: 'mock-anon-key',
+    );
   }
 }
