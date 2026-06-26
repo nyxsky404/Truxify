@@ -809,6 +809,30 @@ router.put('/:id/milestones', authenticate, userLimiter, requireRole(['driver'])
     if (orderErr || !order) return res.status(404).json({ error: 'Order not found.' });
     if (order.driver_id !== req.user.id) return res.status(403).json({ error: 'Access Denied: You are not assigned to this order.' });
 
+    const { data: timeline, error: tlErr } = await supabase
+      .from('order_timeline')
+      .select('milestone, sort_order, completed')
+      .eq('order_display_id', order.order_display_id)
+      .order('sort_order', { ascending: false });
+    if (tlErr) return res.status(500).json({ error: 'Failed to fetch order timeline.' });
+
+    const lastCompleted = timeline.find(t => t.completed);
+    const lastCompletedSortOrder = lastCompleted ? lastCompleted.sort_order : 10;
+
+    const timelineEntry = timeline.find(t => t.milestone === milestone);
+    if (!timelineEntry) return res.status(400).json({ error: `Milestone "${milestone}" is not part of this order's timeline.` });
+
+    if (timelineEntry.completed) {
+      return res.status(409).json({ error: `Milestone "${milestone}" has already been completed.` });
+    }
+
+    const nextExpected = timeline.find(t => !t.completed && t.sort_order > lastCompletedSortOrder);
+    if (!nextExpected || nextExpected.sort_order !== timelineEntry.sort_order) {
+      return res.status(422).json({
+        error: `Milestone out of sequence. Expected "${nextExpected ? nextExpected.milestone : 'none'}" before "${milestone}".`,
+      });
+    }
+
     const status = milestoneMap[milestone];
     const updates = { status, updated_at: new Date().toISOString() };
     let generatedOtp = null;
