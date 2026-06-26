@@ -216,13 +216,9 @@ export async function sendDeliveryOtpNotification(customerId, orderDisplayId, ot
   );
 
   if (process.env.TWILIO_AUTH_TOKEN) {
-    const smsOtpLog = process.env.NODE_DEBUG
-      ? `Sending SMS to customer phone containing OTP ${otp}`
-      : `Sending SMS to customer phone containing OTP ${otp.slice(0, 2)}***`;
-    logger.info(`[NotificationService] [SMS] SMS stub: ${smsOtpLog}`);
+    logger.info(`[NotificationService] [SMS] SMS stub: Sending delivery OTP SMS for order ${orderDisplayId}`);
   } else {
-    const logOtp = process.env.NODE_DEBUG ? otp : `${otp.slice(0, 2)}***`;
-    logger.info(`[NotificationService] [SMS] SMS stub: No SMS gateway configured. Logging OTP out-of-band: ${logOtp}`);
+    logger.info(`[NotificationService] [SMS] SMS stub: No SMS gateway configured. OTP issued for order ${orderDisplayId}`);
   }
 
   return { success: dbSuccess || fcmResult.success, fcm: fcmResult };
